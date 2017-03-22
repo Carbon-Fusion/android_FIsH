@@ -21,7 +21,6 @@
 #
 ######################################################################################################
 
-
 FISHFOOD=fishfood.gz    # <-- do not change. or if: change it in the whole FIsH 
 FISHDIR=/system/fish
 TMPDIR=/data/local/tmpfish
@@ -62,6 +61,7 @@ mkdir $FISHDIR
 
 # adding custom busybox
 echo "copying files..."
+dd if=$TMPDIR/fishfood.release of=$FISHDIR/fishfood.release
 dd if=$TMPDIR/busybox of=$FISHDIR/busybox
 chown root.shell $FISHDIR/busybox
 chmod 755 $FISHDIR/busybox
@@ -100,17 +100,20 @@ fi
 # adding fish
 echo ""
 echo "adding FIsH..."
-dd if=$TMPDIR/FIsH of=/system/su.d/FIsH
-chown root.shell /system/su.d/FIsH
-chmod 755 /system/su.d/FIsH
+dd if=$TMPDIR/callmeFIsH of=/system/su.d/callmeFIsH
+dd if=$TMPDIR/FIsH of=/$FISHDIR/FIsH
+dd if=$TMPDIR/FIsH.me of=/$FISHDIR/FIsH.me
+dd if=$TMPDIR/FIsH.porting of=/$FISHDIR/FIsH.porting
+chown root.shell /system/su.d/callmeFIsH
+chmod 755 /system/su.d/callmeFIsH
 
 # cleaning temp files
 CLEANFILES
 
 # verifying
 echo ""
-if [ -f /system/su.d/FIsH ] && [ -f $FISHDIR/$FISHFOOD ] && [ -f $FISHDIR/busybox ];then
-	echo "FIsH successfully prepared! Enjoy your meal!"
+if [ -f /system/su.d/callmeFIsH ] && [ -f $FISHDIR/$FISHFOOD ] && [ -f $FISHDIR/busybox ] && [ -f $FISHDIR/FIsH ];then
+	echo "FIsH successfully prepared! Enjoy the meal!"
 else
 	echo "Something goes wrong!!!!"
 fi

@@ -1,0 +1,188 @@
+#####################################################################################################
+#
+# This is Android FIsH: [F]luffy [I]ncredible [s]teadfasterX [H]ijack
+#
+# Copyright (C) 2017 steadfasterX <steadfastX@boun.cr>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+######################################################################################################
+
+
+# Modify these variables to your needs/requirements
+
+
+##################################################################################
+### GLOBAL settings ###
+
+# RUNONCE means FIsH will be removed after run once!!
+RUNONCE=0
+
+# will generate more DEBUG files in the FIsH log directory (unused atm)
+DEBUG=0
+
+# time in seconds for how long you want to wait for the magic key press
+# if you set this too long Android may been booted up completely and if u make it
+# too low users may complain that they can not get into FIsH.. so it may or may not
+# need to be adjusted
+KEYWAIT=3
+
+# FIsH boots whatever ramdisk you like. To prepare your fishfood (your ramdisk u wanna load):
+#       create a gziped cpio of your initial ramdisk u wanna load
+#       example of a twrp image:
+#           abootimg -x twrp.img (will extract the twrp image)
+#           file initrd.img (should tell something like: gzip compressed data. if NOT: gzip it!)
+#           mv initrd.img fishing/fishfood.gz (moves the extracted initial ramdisk)
+#   Some Notes:
+#       - this cpio has to be compressed with gzip (.gz file ending!)
+#       - the name of this file is your FISHFOOD variable
+#       - edit or add a file fishing/fishfood.release and type in what ur fishfood is (e.g. TWRP)
+#         and the version of it course (e.g. TWRP v3.1.0-1)
+
+FISHFOOD="fishfood.gz"  # <--- I highly recommend to NOT change this variable. It will break several things! Just rename your initrd to this instead.
+
+
+# After FIsH has finished it's work its time to start your FIsHFOOD so the ramdisk you 
+# want to start. This gets auto extracted and prepared but FIsH needs to know the start the full
+# path with the binary name (WITHOUT the leading slash). Normally this would be "init" but can be different depending on the ramdisk.
+# For TWRP and MultiROM it's just init for other ramdisk or tools you want to load this may be different.
+# so in short this HAS TO MATCH -YOUR- ramdisk. if it doesnt have an init but another executable update this.
+# if u r unsure leave it as it is and check the fish log later.
+FOODBIN="init"
+
+### GLOBAL end ###
+##################################################################################
+
+##################################################################################
+### PORTING SECTION / DEVICE SPECIFIC SETTINGS ###
+
+# vibrate definition
+# - Porting instructions -
+#       should be ok but if not maybe something like this helps u out: 
+#       find /sys -name vibrator
+VIBRATE="/sys/class/timed_output/vibrator/enable"
+
+# LED brightness definition
+# - Porting instructions -
+#       should be ok but if not maybe something like this helps u:
+#       find /sys -name leds
+#       find /sys -name led
+#       find /sys -name green
+#       find /sys -name brightness
+# BOOT_LED: the default LED which shines on normal boot
+BOOT_LED="/sys/class/leds/blue/brightness"
+# WAIT_LED: the LED which indicates that FIsH is NOW waiting for the magic key press of the user
+WAIT_LED="/sys/class/leds/green/brightness"
+# FISHB: the LED which indicates that the FIsHFOOD gets activated and the actual hack starts/ends
+FISH_LED="/sys/class/leds/red/brightness"
+
+# MAGIC key press to allow FIsH to boot it's food
+# - Porting instructions -
+#       A) dmesg (better handling for the script but may differ for all devices)
+#       use dmesg to find out the line matching your needs.
+#       press the desired key and check the ouput
+#       in my case code 114 means Volume Down key and this together with a value of 2 means it is still not released
+#       the qpnp_pon_... part may differ completely from yours
+#       B) getevent (better multi device support but blocks and is not that flexible)
+#          -->  main issue with getevent is that one cannot really CATCH its output?! sorry i havent found a smooth
+#               way to do so yet. e.g. try to use getevent -l | grep DOWN => this will NOT work!! same goes for 
+#               | hexdump and whatever u can think of. Even CAT doesnt work here.
+#               the only way it really can be saved somewhere is: "cat /dev/input/eventX > mylog.file &"
+#               the ampersand at the end is DAMN important. without it it will NOT work.
+#               prob: the generated file contains unreadable output ofc so u need to use e.g od or hexdump to make
+#               it parseable. All of them are not nice solutions but may work at least.
+#               thats y I prefer the dmesg method..
+#       identify the input device by executing (on running Android):
+#       $> getevent -i
+#       Then u can watch live with the identified input device while pressing the desired key(s):
+#       $> getevent -l /dev/input/eventX (e.g. event1)
+#       It is possible that u have to watch different input devices when using multiple keys like
+#       on my device (volume up is on event2 while vol down on event1).
+#       If you prefer getevent over dmesg keep also in mind that you have to use an ampersand at the end otherwise
+#       u can not continue a normal boot
+F_KEYPRESS(){
+    # dmesg example for power pressed (and not released!)
+    #KEYACT=$($DMESG | ${GREP} 'qpnp_pon_input_dispatch: code(116)' | $GREP 'value(1)' |tail -n1 | $GREP -c value)
+    #ECHOL "Power button check: $PWRACT"
+    
+    # dmesg example for vol_down pressed (and not released!)
+    KEYACT=$($DMESG | ${GREP} 'qpnp_pon_input_dispatch: code(114)' | $GREP 'value(2)'| tail -n1 | $GREP -c value)
+
+    # the following getevent implementation means: if desired key pressed once - released or not!
+    # -l labels the events to human readable
+    # -c 1 exits after 1 event (whatever it is)
+
+    # the key u wanna choose to boot into FIsH
+    # Normally this will be one of: KEY_VOLUMEDOWN, KEY_VOLUMEUP, KEY_POWER
+    #FISHKEY="KEY_VOLUMEDOWN"
+
+    # you do NOT need to touch the following. The FISHKEY above should be enough.
+    # TIMEOUT -t KEYWAIT is f*** important here!!! RTFM and use ur brain if u wonder y.
+    #KEYACT=$(${TIMEOUT} -t $KEYWAIT getevent -l | $GREP $FISHKEY |tr -d ' '| $GREP -c "EV_KEY{$FISHKEY}DOWN")
+    #KEYACT=$(getevent -l | $GREP $FISHKEY |tr -d ' '| $GREP -c "EV_KEY{$FISHKEY}DOWN")
+
+    # that means if the expected key was found we will have KEYACT=1 otherwise 0
+    ECHOL "VolDown button check: $KEYACT"
+    return "$KEYACT"
+}
+
+# device specific mount points
+# - Porting instructions -
+#       use the command "mount" to find out yours and adjust this variable accordingly
+#       The ORDER is IMPORTANT!
+#       (means u have to umount all submounts first before u can unmount the main one)
+MOUNTS="/acct \
+       /mnt/secure \
+       /mnt/asec \
+       /mnt/obb \
+       /mnt/pstore \
+       /mnt/sdcard \
+       /mnt/shell/emulated \
+       /mnt/shell \
+       /storage/external_SD \
+       /storage/sdcard0 \
+       /storage/emulated/legacy \
+       /storage/emulated/0 \
+       /storage/emulated \
+       /data/media \
+       /data \
+       /persist \
+       /firmware \
+       /sns \
+       /persist-lg \
+       /mpt \
+       /cust"
+
+# device specific mount points - OS special
+# - Porting instructions -
+#       system near mounts like /proc and /sys should be unmounted at the end first.
+#       those should be listed here.
+#       use the command "mount" to find out yours and adjust this variable accordingly.
+#       The ORDER is IMPORTANT!
+#       (means u have to umount all submounts first before u can unmount the main one)
+SPECMOUNTS="/dev/usb-ffs/adb \
+    /sys/fs/selinux \
+    /sys/kernel/debug \
+    /sys/fs/cgroup \
+    /sys/fs/pstore \
+    /dev/pts \
+    /dev/cpuctl \
+    /proc \
+    /sys"
+    
+
+
+### PORTING SECTION END ###
+##################################################################################
