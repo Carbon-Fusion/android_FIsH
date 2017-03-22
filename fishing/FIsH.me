@@ -1,0 +1,96 @@
+#####################################################################################################
+#
+# This is Android FIsH: [F]luffy [I]ncredible [s]teadfasterX [H]ijack
+#
+# Copyright (C) 2017 steadfasterX <steadfastX@boun.cr>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+######################################################################################################
+
+#################################################################################################
+# STOP HERE. No need to continue ;-) you only have to modify the file FIsH.porting!!
+#################################################################################################
+
+# Command setup
+CMD_SETUP(){
+    DMESG="${BUSYBOX} dmesg"
+	DATE="${BUSYBOX} date"
+	MKDIR="${BUSYBOX} mkdir"
+	CHOWN="${BUSYBOX} chown"
+	CHMOD="${BUSYBOX} chmod"
+        CHROOT="${BUSYBOX} chroot"
+	MV="${BUSYBOX} mv"
+	TOUCH="${BUSYBOX} touch"
+	CAT="${BUSYBOX} cat"
+	SLEEP="${BUSYBOX} sleep"
+	KILL="${BUSYBOX} kill"
+	RM="${BUSYBOX} rm"
+	PS="${BUSYBOX} ps"
+	GREP="${BUSYBOX} grep"
+	AWK="${BUSYBOX} awk"
+    SED="${BUSYBOX} sed"
+	EXPR="${BUSYBOX} expr"
+	MOUNT="${BUSYBOX} mount"
+	UMOUNT="${BUSYBOX} umount"
+	TAR="${BUSYBOX} tar"
+	GZIP="${BUSYBOX} gzip"
+	CPIO="${BUSYBOX} cpio"
+	CHROOT="${BUSYBOX} chroot"
+	LS="${BUSYBOX} ls"
+    LSOF="${BUSYBOX} lsof"
+	HEXDUMP="${BUSYBOX} hexdump"
+	CP="${BUSYBOX} cp"
+    SH="${BUSYBOX} sh"
+    TIMEOUT="${BUSYBOX} timeout"
+    FIND="$BUSYBOX find"
+    FUSER="$BUSYBOX fuser"
+}
+
+#Function definition for get property
+F_GETPROP(){
+	# Get the property from getprop
+	PROP=`/system/bin/getprop $*`
+	PROP=`grep "$*" /system/build.prop | $AWK -F'=' '{ print $NF }'`
+	echo $PROP
+}
+
+# Function definition for logging
+ECHOL(){
+	_DATETIME=`${BUSYBOX} date +"%F %T"`
+	echo "${_DATETIME}: $*" >> ${LOGFILE}
+	return 0
+}
+
+# function definition for log exec command
+EXECL(){
+	_DATETIME=`${BUSYBOX} date +"%F %T"`
+	echo "${_DATETIME}: $*" >> ${LOGFILE}
+	$* 2>> ${LOGFILE}
+	_RET=$?
+	echo "${_DATETIME}: RET=${_RET}" >> ${LOGFILE}
+	return ${_RET}
+}
+
+
+### FIsH definitions
+
+LOGPATH="/cache/fish"
+LOGFILE="${LOGPATH}/fish.log"
+WORKDIR="${LOGPATH}"
+BTMGRPATH="/res/fish"
+BUSYBOX="${BTMGRPATH}/busybox"
+_DT=$(${BUSYBOX} date +"%F %T")
+

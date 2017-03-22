@@ -21,13 +21,26 @@
 #
 ######################################################################################################
 
-echo "***************************************************************"
-echo "** FIsH: [F]luffy [I]ncredible [s]teadfasterX [H]ijack       **"
-echo "**                                                           **"
-echo "**                        brought to u by: steadfasterX ;)   **"
-echo "**                                                           **"
-echo "** ... and MANY thx for your ideas and work @Aaahh !         **"
-echo "***************************************************************"
+cat <<EOCP
+
+Android FIsH Copyright (C) 2017 steadfasterX <steadfastX@boun.cr>
+
+This program comes with ABSOLUTELY NO WARRANTY!
+This is free software, and you are welcome to redistribute it
+under certain conditions.
+
+The complete license and copying can be found in the file
+COPYING and COPYING.LESSER
+
+EOCP
+
+echo "*********************************************************************"
+echo "**   Android FIsH: [F]luffy [I]ncredible [s]teadfasterX [H]ijack   **"
+echo "*********************************************************************"
+
+
+# The full URL to the busybox version compatible to your device:
+BUSYBOXURI="https://busybox.net/downloads/binaries/1.26.2-defconfig-multiarch/busybox-armv6l"
 
 # the required android version -> have to match the fish you package 
 # (e.g. TWRP have to be compatible with that version)
@@ -38,8 +51,18 @@ REQBUILD="5.1"
 # well 2.67 should work but i will not tell anyone ;) (totally untested)
 MINSU="279"
 
-# The full URL to the busybox version compatible to your device:
-BUSYBOXURI="https://busybox.net/downloads/binaries/1.26.2-defconfig-multiarch/busybox-armv6l"
+
+##############################################################################################
+
+# we do not want to distribute busybox to avoid licensing issues so u need to download it:
+echo -e "\n############# Checking for busybox"
+[ ! -f fishing/busybox ] && echo "...downloading busybox" && wget "$BUSYBOXURI" -O fishing/busybox && chmod 755 fishing/busybox
+[ ! -f fishing/busybox ] && echo "ERROR: MISSING BUSYBOX! Download it manually and place it in the directory: ./fishing/ and name it <busybox>" && exit 3
+
+# preparing your system
+adb start-server
+echo -e "Waiting for your device... (you may have to switch to PTP mode on some devices!!)"
+adb wait-for-device
 
 # precheck min requirement adb:
 adb version
@@ -56,12 +79,6 @@ F_ERR(){
         echo "-> command ended successfully ($1)"
     fi
 }
-
-# we do not want to distribute busybox to avoid licensing issues so u need to download it:
-echo -e "\n############# Checking for busybox"
-[ ! -f fishing/busybox ] && echo "...downloading busybox" && wget "$BUSYBOXURI" -O fishing/busybox && chmod 755 fishing/busybox
-[ ! -f fishing/busybox ] && echo "ERROR: MISSING BUSYBOX! Download it manually and place it in the directory: ./fishing/ and name it <busybox>" && exit 3
-
 #echo "############# waiting for a connected adb device"
 #adb wait-for-device
 echo "############# checking Android version"
@@ -89,8 +106,17 @@ F_ERR $RET
 SEL="$(adb shell getenforce|tr -d '\r')"
 echo "SELinux mode: $SEL"
 [ "$SEL" != "Permissive" ]&& echo 'ABORTED!!! YOU CAN NOT GET PERMISSIVE SELINUX MODE!' && exit
+echo "############# remount /system"
+RET=$(adb shell "su -c 'mount -oremount,rw /system; echo err=$?'" | grep err=|tr -d '\r') # bullshit.. mount do not return a valid errorcode!
+#F_ERR $RET
 echo "############# cleaning"
 RET=$(adb shell 'su -c rm -Rf /data/local/tmpfish/; echo err=$?' | grep err= |tr -d '\r')
+F_ERR $RET
+RET=$(adb shell 'su -c rm -f /system/su.d/FIsH; echo err=$?' | grep err= |tr -d '\r')
+F_ERR $RET
+RET=$(adb shell 'su -c rm -f /system/su.d/callmeFIsH; echo err=$?' | grep err= |tr -d '\r')
+F_ERR $RET
+RET=$(adb shell 'su -c rm -Rf /system/fish; echo err=$?' | grep err= |tr -d '\r')
 F_ERR $RET
 echo "############# creating temporary directory"
 RET=$(adb shell 'su -c mkdir /data/local/tmpfish; echo err=$?' | grep err=|tr -d '\r')
@@ -101,9 +127,6 @@ echo "############# pushing files"
 for fishes in $(find fishing/ -type f );do adb push $fishes /data/local/tmpfish/;done
 RET=$(adb shell 'su -c chmod 755 /data/local/tmpfish/gofishing.sh; echo err=$?' | grep err=|tr -d '\r')
 F_ERR $RET
-echo "############# remount /system"
-RET=$(adb shell "su -c 'mount -oremount,rw /system; echo err=$?'" | grep err=|tr -d '\r') # bullshit.. mount do not return a valid errorcode!
-#F_ERR $RET
 echo "############# injecting the FIsH"
 RET=$(adb shell 'su -c /data/local/tmpfish/gofishing.sh; echo err=$?' | grep err=|tr -d '\r')
 F_ERR $RET
@@ -115,6 +138,6 @@ echo
 echo -e "Get support on IRC:\n"
 echo -e "\tInstall HexChat (https://hexchat.github.io) -> channel #Carbon-user on freenode"
 echo -e "\tor"
-echo -e "\tOpen: http://webchat.freenode.net/?channels=Carbon-user"
+echo -e "\tjust open http://webchat.freenode.net/?channels=Carbon-user"
 echo 
 echo

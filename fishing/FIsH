@@ -20,249 +20,30 @@
 #
 ######################################################################################################
 
-##################################################################################
-### GLOBAL settings ###
 
-# RUNONCE means FIsH will be removed after run once!!
-RUNONCE=0
+#################################################################################################
+# STOP HERE. No need to continue ;-) you only have to modify the FIsH.vars!!
+#################################################################################################
 
-# will generate more DEBUG files in the FIsH log directory
-DEBUG=1
-
-# time in seconds for how long you want to wait for the magic key press
-# if you set this too long Android may been booted up completely and if u make it
-# too low users may complain that they can not get into FIsH.. so it may or may not
-# need to be adjusted
-KEYWAIT=4
-
-# FIsH boots whatever ramdisk you like. To prepare your fishfood (your ramdisk u wanna load):
-#       1) a cpio of your initial ramdisk u wanna load
-#       example of a twrp image:
-#           abootimg -x twrp.img (will extract the twrp image)
-#           file initrd.img (should tell something like: gzip compressed data. if NOT: gzip it!)
-#           mv initrd.img fishing/fishfood.gz (moves the extracted initial ramdisk)
-#   Some Notes:
-#       - this cpio has to be compressed with gzip (.gz file ending!)
-#       - the name of this file is your FISHFOOD variable
-#       - edit or add a file fishing/fishfood.release and type in what ur fishfood is (e.g. TWRP)
-#         and the version of it course (e.g. TWRP v3.1.0-1)
-
-FISHFOOD="fishfood.gz"  # <--- I highly recommend to NOT change this variable. Just rename your initrd to this instead.
-
-
-### GLOBAL end ###
-##################################################################################
-
-##################################################################################
-### PORTING SECTION ###
-
-# vibrate definition
-# - Porting instructions -
-#       should be ok but if not maybe something like this helps u out: 
-#       find /sys -name vibrator
-VIBRATE="/sys/class/timed_output/vibrator/enable"
-
-# LED brightness definition
-# - Porting instructions -
-#       should be ok but if not maybe something like this helps u:
-#       find /sys -name leds
-#       find /sys -name led
-#       find /sys -name green
-#       find /sys -name brightness
-# BOOT_LED: the default LED which shines on normal boot
-BOOT_LED="/sys/class/leds/blue/brightness"
-# WAIT_LED: the LED which indicates that FIsH is NOW waiting for the magic key press of the user
-WAIT_LED="/sys/class/leds/green/brightness"
-# FISHB: the LED which indicates that the FIsHFOOD gets activated and the actual hack starts/ends
-FISH_LED="/sys/class/leds/red/brightness"
-
-# MAGIC key press to allow FIsH to boot it's food
-# - Porting instructions -
-#       A) dmesg (better handling for the script but may differ for all devices)
-#       use dmesg to find out the line matching your needs.
-#       press the desired key and check the ouput
-#       in my case code 114 means Volume Down key and this together with a value of 2 means it is still not released
-#       the qpnp_pon_... part may differ completely from yours
-#       B) getevent (better multi device support but blocks and is not that flexible)
-#          -->  main issue with getevent is that one cannot really CATCH its output?! sorry i havent found a smooth
-#               way to do so yet. e.g. try to use getevent -l | grep DOWN => this will NOT work!! same goes for 
-#               | hexdump and whatever u can think of. Even CAT doesnt work here.
-#               the only way it really can be saved somewhere is: "cat /dev/input/eventX > mylog.file &"
-#               the ampersand at the end is DAMN important. without it it will NOT work.
-#               prob: the generated file contains unreadable output ofc so u need to use e.g od or hexdump to make
-#               it parseable. All of them are not nice solutions but may work at least.
-#               thats y I prefer the dmesg method..
-#       identify the input device by executing (on running Android):
-#       $> getevent -i
-#       Then u can watch live with the identified input device while pressing the desired key(s):
-#       $> getevent -l /dev/input/eventX (e.g. event1)
-#       It is possible that u have to watch different input devices when using multiple keys like
-#       on my device (volume up is on event2 while vol down on event1).
-#       If you prefer getevent over dmesg keep also in mind that you have to use an ampersand at the end otherwise
-#       u can not continue a normal boot
-F_KEYPRESS(){
-    # dmesg example for power pressed (and not released!)
-    #KEYACT=$($DMESG | ${GREP} 'qpnp_pon_input_dispatch: code(116)' | $GREP 'value(1)' |tail -n1 | $GREP -c value)
-    #ECHOL "Power button check: $PWRACT"
-    
-    # dmesg example for vol_down pressed (and not released!)
-    KEYACT=$($DMESG | ${GREP} 'qpnp_pon_input_dispatch: code(114)' | $GREP 'value(2)'| tail -n1 | $GREP -c value)
-
-    # the following getevent implementation means: if desired key pressed once - released or not!
-    # -l labels the events to human readable
-    # -c 1 exits after 1 event (whatever it is)
-
-    # the key u wanna choose to boot into FIsH
-    # Normally this will be one of: KEY_VOLUMEDOWN, KEY_VOLUMEUP, KEY_POWER
-    #FISHKEY="KEY_VOLUMEDOWN"
-
-    # you do NOT need to touch the following. The FISHKEY above should be enough.
-    # TIMEOUT -t KEYWAIT is f*** important here!!! RTFM and use ur brain if u wonder y.
-    #KEYACT=$(${TIMEOUT} -t $KEYWAIT getevent -l | $GREP $FISHKEY |tr -d ' '| $GREP -c "EV_KEY{$FISHKEY}DOWN")
-    #KEYACT=$(getevent -l | $GREP $FISHKEY |tr -d ' '| $GREP -c "EV_KEY{$FISHKEY}DOWN")
-
-    # that means if the expected key was found we will have KEYACT=1 otherwise 0
-    ECHOL "VolDown button check: $KEYACT"
-    return "$KEYACT"
-}
-
-# device specific mount points
-# - Porting instructions -
-#       use the command "mount" to find out yours and adjust this variable accordingly
-#       The ORDER is IMPORTANT!
-#       (means u have to umount all submounts first before u can unmount the main one)
-MOUNTS="/acct \
-       /mnt/asec \
-       /mnt/obb \
-       /mnt/pstore \
-       /mnt/sdcard \
-       /mnt/secure \
-       /mnt/shell/emulated \
-       /mnt/shell \
-       /storage/external_SD \
-       /storage/sdcard0 \
-       /storage/emulated/legacy \
-       /storage/emulated/0 \
-       /storage/emulated \
-       /data/media \
-       /data \
-       /persist \
-       /firmware \
-       /sns \
-       /persist-lg \
-       /mpt \
-       /cust"
-
-# device specific mount points - OS special
-# - Porting instructions -
-#       system near mounts like /proc and /sys should be unmounted at the end first.
-#       those should be listed here.
-#       use the command "mount" to find out yours and adjust this variable accordingly.
-#       The ORDER is IMPORTANT!
-#       (means u have to umount all submounts first before u can unmount the main one)
-SPECMOUNTS="/dev/usb-ffs/adb \
-    /sys/fs/selinux \
-    /sys/kernel/debug \
-    /sys/fs/cgroup \
-    /sys/fs/pstore \
-    /dev/pts \
-    /dev/cpuctl \
-    /proc \
-    /sys"
-    
-
-
-### PORTING SECTION END ###
-##################################################################################
-
-
-##################################################################################
-### FIsH definitions (dont touch)
-
-LOGPATH="/cache/fish"
-LOGFILE="${LOGPATH}/fish.log"
-WORKDIR="${LOGPATH}"
-BTMGRPATH="/system/fish"
-BUSYBOX="${BTMGRPATH}/busybox"
-_DT=$(${BUSYBOX} date +"%F %T")
 
 #################################################################################################
 ########### NOW CODE ONLY #######################################################################
 #################################################################################################
 
-# Command setup
-CMD_SETUP(){
-    DMESG="${BUSYBOX} dmesg"
-	DATE="${BUSYBOX} date"
-	MKDIR="${BUSYBOX} mkdir"
-	CHOWN="${BUSYBOX} chown"
-	CHMOD="${BUSYBOX} chmod"
-        CHROOT="${BUSYBOX} chroot"
-	MV="${BUSYBOX} mv"
-	TOUCH="${BUSYBOX} touch"
-	CAT="${BUSYBOX} cat"
-	SLEEP="${BUSYBOX} sleep"
-	KILL="${BUSYBOX} kill"
-	RM="${BUSYBOX} rm"
-	PS="${BUSYBOX} ps"
-	GREP="${BUSYBOX} grep"
-	AWK="${BUSYBOX} awk"
-    SED="${BUSYBOX} sed"
-	EXPR="${BUSYBOX} expr"
-	MOUNT="${BUSYBOX} mount"
-	UMOUNT="${BUSYBOX} umount"
-	TAR="${BUSYBOX} tar"
-	GZIP="${BUSYBOX} gzip"
-	CPIO="${BUSYBOX} cpio"
-	CHROOT="${BUSYBOX} chroot"
-	LS="${BUSYBOX} ls"
-    LSOF="${BUSYBOX} lsof"
-	HEXDUMP="${BUSYBOX} hexdump"
-	CP="${BUSYBOX} cp"
-    TIMEOUT="${BUSYBOX} timeout"
-    FIND="$BUSYBOX find"
-}
+# do not touch this. If those files are missing check callmeFIsH first!
+TMPFISHDIR=/res/fish
+
+PID=$$
+FISHME=$TMPFISHDIR/FIsH.me
+FISHPORT=$TMPFISHDIR/FIsH.porting
+
+[ ! -f $FISHME ] && echo "ERROR missing FIsH.me" && exit 3
+[ ! -f $FISHPORT ] && echo "ERROR missing FIsH.porting" && exit 3
+source $FISHME
+source $FISHPORT
 
 # initialize commands
 CMD_SETUP
-
-#Function definition for get property
-F_GETPROP(){
-	# Get the property from getprop
-	PROP=`/system/bin/getprop $*`
-	PROP=`grep "$*" /system/build.prop | $AWK -F'=' '{ print $NF }'`
-	echo $PROP
-}
-
-# Function definition for logging
-ECHOL(){
-	_DATETIME=`${BUSYBOX} date +"%F %T"`
-	echo "${_DATETIME}: $*" >> ${LOGFILE}
-	return 0
-}
-
-# function definition for log exec command
-EXECL(){
-	_DATETIME=`${BUSYBOX} date +"%F %T"`
-	echo "${_DATETIME}: $*" >> ${LOGFILE}
-	$* 2>> ${LOGFILE}
-	_RET=$?
-	echo "${_DATETIME}: RET=${_RET}" >> ${LOGFILE}
-	return ${_RET}
-}
-
-# Logfile rotation
-if [ ! -d "${LOGPATH}" ];then
-    ${MKDIR} ${LOGPATH}
-    ${CHOWN} system.system ${LOGPATH}
-    ${CHMOD} 770 ${LOGPATH}
-else
-    if [ -f ${LOGFILE} ];then
-        ${MV} ${LOGFILE} ${LOGFILE}.old
-    fi
-    ${TOUCH} ${LOGFILE}
-    ${CHMOD} 660 ${LOGFILE}
-fi
 
 ${MOUNT} -o remount,rw rootfs /	
 echo "${_DT} - $0 loaded" >> /$LOGFILE
@@ -281,6 +62,9 @@ echo -e "\tFingerprint: $AFP" >> $LOGFILE
 
 # this requires a patched /system with SuperSU but is required for everything in here:
 # selinux=permissive
+# we will save the default selinux mode for your device to not leaving your STOCK ROM
+# to permissive if u may don't want to.
+SELINUXBOOT=$(getenforce 0 |tr -d '\r')
 echo "${_DT} - booted selinux mode <$(getenforce)>" >> /$LOGFILE
 setenforce 0
 echo "${_DT} - selinux is now: <$(getenforce)>" >> /$LOGFILE
@@ -311,6 +95,7 @@ if [ "$FISH_FLAG" == "true" ];then
     ECHOL "### Enforcing FIsH boot mode by $FISH_FLAG..."
     RAMDISK="$FISHFOOD"
 else
+    # check for the magic key press
     F_KEYPRESS
     KEYRET="$?"
     if [ "$KEYRET" -eq 1 ];then
@@ -326,6 +111,8 @@ fi
 EXECL cd /
 if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     ECHOL "### ${RAMDISK} exists..."
+
+    ECHOL "Your FIsHFOOD is: $($CAT ${BTMGRPATH}/fishfood.release)" >> $LOGFILE
 
     # removing flag to start FIsH
     if [ -f /cache/recovery/boot ]; then
@@ -363,14 +150,30 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
 
     # Stop init services.
     ECHOL "### stop init services..."
+    ECHOL "All service states before:"
+    getprop | ${GREP} -E '^\[init\.svc\..*\]:' >> $LOGFILE
+    
     for SVCRUNNING in $(getprop | ${GREP} -E '^\[init\.svc\..*\]: \[running\]' | ${GREP} -v ueventd)
     do
+        # set counter
+        CNT=0
     	SVCNAME=$(${EXPR} ${SVCRUNNING} : '\[init\.svc\.\(.*\)\]:.*')
-        #SVCNAME=$(echo "$SVCRUNNING" |cut -d ']' -f1 |cut -d '.' -f3)
-    	#EXECL stop ${SVCNAME}
-        [ ! -z "$SVCNAME" ] && EXECL stop ${SVCNAME}
+        # try to stop a service it up to 3 times (we cannot get a valid service error state so this way..)
+        while [ $CNT -lt 3 ];do
+            if [ ! -z "$SVCNAME" ];then
+                EXECL stop ${SVCNAME}
+                CNT=$((CNT +1))
+                ECHOL "increased counter for $SVCNAME to $CNT"
+            else
+                # break out
+                CNT=99
+            fi
+        done
     done
         
+    ECHOL "All service states after:"
+    getprop | ${GREP} -E '^\[init\.svc\..*\]:' >> $LOGFILE
+
     # Kill remaining processes under /system/bin
     ECHOL "### Kill /system/bin and /system/xbin processes (ps based)..."
     ${PS} | e${GREP} '(/system/bin|/system/xbin)' >> $LOGFILE
@@ -394,23 +197,24 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     	EXECL ${KILL} -9 ${RUNNINGPRC}
     done
 
-    ## Moving Busybox to /res
-    ECHOL "### moving busybox.."
-    EXECL ${RM} -rf /res
-    EXECL ${MKDIR} /res 
-    EXECL ${CHOWN} 0.0 /res
-    EXECL ${CHMOD} 0777 /res
-    EXECL ${CP} ${BUSYBOX} /res
-    BUSYBOX="/res/busybox"
+    # MOVED to CALLMEFISH
+    ### Moving Busybox to /res
+    #ECHOL "### moving busybox.."
+    #EXECL ${RM} -rf /res
+    #EXECL ${MKDIR} /res 
+    #EXECL ${CHOWN} 0.0 /res
+    #EXECL ${CHMOD} 0777 /res
+    #EXECL ${CP} ${BUSYBOX} /res
+    #BUSYBOX="$TMPFISHDIR/busybox"
     # Setup busybox commands to the new path 
-    CMD_SETUP
+    #CMD_SETUP
     
     ## Move and decompress ramdisk to /res
-    ECHOL "### moving ${RAMDISK}..."
-    EXECL ${CP} ${BTMGRPATH}/${RAMDISK} /res
+    #ECHOL "### moving ${RAMDISK}..."
+    #EXECL ${CP} ${BTMGRPATH}/${RAMDISK} /res
     ECHOL "### decompress ${RAMDISK}..."
-    EXECL ${GZIP} -d /res/${RAMDISK}
-    $LS -la /res/ >> $LOGFILE
+    EXECL ${GZIP} -d $TMPFISHDIR/${RAMDISK}
+    $LS -la $TMPFISHDIR >> $LOGFILE
     
     ##################################################################
     #
@@ -428,14 +232,28 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     $MOUNT >> $LOGFILE
     
     #in order to completely remove them later we remount them rw before
-    for i in $($MOUNT |$GREP 'ro,'|grep -v remount-ro |$SED 's/ /|/g' | cut -d '|' -f3);do
-        ECHOL "### Remounting $i RW"
-        EXECL $MOUNT -oremount,rw $i
-    done
+    #for i in $($MOUNT |$GREP 'ro,'|grep -v remount-ro |$SED 's/ /|/g' | cut -d '|' -f3);do
+    #    ECHOL "### Remounting $i RW"
+    #    EXECL $MOUNT -oremount,rw $i
+    #done
+    EXECL $MOUNT -oremount,rw /system
     
     # umount all normal mounts (no /system yet!)
     for i in $MOUNTS;do
-        EXECL ${UMOUNT} $i || EXECL ${UMOUNT} -f $i || EXECL ${UMOUNT} -l $i
+        if [ -e "$i" ];then
+            ECHOL "### killing all processes accessing $i (if any can be found by fuser)"
+            for pid in $($FUSER -m $i);do
+                if [ $pid -eq $PID ]||[ $pid -eq 1 ];then
+                    ECHOL "skipped to kill excluded pid $pid"
+                else
+                    #ECHOL kill disabled
+                    EXECL $KILL -9 $pid
+                fi
+            done
+            EXECL ${UMOUNT} $i || EXECL ${UMOUNT} -f $i || EXECL ${UMOUNT} -l $i
+        else
+            ECHOL "Skipped requested unmount because it does not exist ($i)"
+        fi
     done
     
     ECHOL " ### Partitions after umounting"
@@ -476,7 +294,7 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     if [ "$RUNONCE" -eq 1 ];then
         ECHOL "### RUNONCE DETECTED! WILL REMOVING FIsH FROM NEXT BOOT!!!"
         EXECL ${MOUNT} -oremount,rw /system
-        EXECL ${RM} -rf /system/su.d/
+        EXECL ${RM} -rf /system/su.d/ $BTMGRPATH $TMPFISHDIR
     fi
 
     # AS OF HERE NO MORE BUSYBOX SYMLINKS IN $PATH!!!!
@@ -492,35 +310,44 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     ECHOL "### Remove directories..."
     for directory in `${BUSYBOX} find . -maxdepth 1 -type d`; do
     	if [ "$directory" != "." -a "$directory" != ".." -a "$directory" != "./" -a "$directory" != "./dev" -a "$directory" != "./proc" -a "$directory" != "./sys" -a "$directory" != "./res" -a "$directory" != "./cache" ]; then
-    		EXECL ${BUSYBOX} echo "rm -vrf $directory"
             $LS -la $directory >> $LOGFILE
     		EXECL ${RM} -vrf $directory 2>&1 
     	fi
-    done	
+    done
 
     _DT=`${BUSYBOX} date +"%F %T"`
     echo "${_DT} - Will cook the FIsH now -> ${RAMDISK} \n" >> $LOGFILE
     
     # log process before extract ramdisk
-    echo "\n\n ***** processes before extracting ramdisk ***** \n" >> $LOGFILE
+    echo -e "\n\n ***** processes before extracting ramdisk ***** \n" >> $LOGFILE
     ${PS} >> $LOGFILE
-    echo "\n\n ***** directories before extracting ramdisk ***** \n" >> $LOGFILE
+    echo -e "\n\n ***** directories before extracting ramdisk ***** \n-e " >> $LOGFILE
     ${LS} -la >> $LOGFILE
     
     # extract the food
     ECHOL "### Extracting uncompressed ramdisk (${RAMDISK/.gz}).."
-    EXECL ${CPIO} -i -u < /res/${RAMDISK/.gz}
+    #EXECL ${CPIO} -i -u < $TMPFISHDIR/${RAMDISK/.gz}
+    # busybox cpio does not support exclusions by pattern ..
+    for fishes in $($CPIO -t < $TMPFISHDIR/${RAMDISK/.gz});do
+        # do not overwrite /init!
+        [ "$fishes" != "init" ] && EXECL ${CPIO} -i -u "$fishes" < $TMPFISHDIR/${RAMDISK/.gz}
+    done
+    cd /res && EXECL ${CPIO} -i -u "$FOODBIN" < $TMPFISHDIR/${RAMDISK/.gz}
+    EXECL $MV /res/$FOODBIN /init
+    cd /
+    
+    # TODO: validations of the above?! to avoid extraction errors etc..
     
     DATETIME=`${BUSYBOX} date +"%F %T"`
-    ECHOL "STOP $0 at ${DATETIME}: Executing the FIsHFOOD! YOU SHOULD SMELL THE FIsH ALREADY!" 
+    ECHOL "########### Executing the FIsHFOOD! YOU SHOULD SMELL THE FIsH ALREADY!" 
 
-    echo "\n\n ***** process before exec init ***** \n" >> $LOGFILE 
+    echo -e "\n\n ***** process before exec init ***** \n" >> $LOGFILE 
     ${PS} >> $LOGFILE 
 
-    echo "\n\n ***** lsof before extracting ramdisk ***** \n" >> $LOGFILE
+    echo -e "\n\n ***** lsof before extracting ramdisk ***** \n" >> $LOGFILE
     ${LSOF} >> $LOGFILE
 
-    echo "\n\n ***** inotifies before extracting ramdisk ***** \n" >> $LOGFILE    
+    echo -e "\n\n ***** inotifies before extracting ramdisk ***** \n" >> $LOGFILE    
     $PS $($FIND /proc/*/fd/* -type l -lname 'anon_inode:inotify' -print 2> /dev/null | $SED -e 's/^\/proc\/\([0-9]*\)\/.*/\1/')  >> $LOGFILE    
 
     # umount all special mounts
@@ -528,7 +355,7 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
         EXECL ${UMOUNT} $i || EXECL ${UMOUNT} -f $i || EXECL ${UMOUNT} -l $i
     done
     
-    echo "\n\n ***** directory before exec init ***** \n" >> $LOGFILE 
+    echo -e "\n\n ***** directory before exec init ***** \n" >> $LOGFILE 
     ${LS} -la >> $LOGFILE 
     
     # wait 
@@ -555,7 +382,12 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
         
     # let the FISHFOOD takeover!
     #$CHROOT / /init
-    exec /init
+    if [ -x $FOODBIN ];then
+        ECHOL "... now its all over ;) 1 ms before executing <$FOODBIN>! Hope u enjoy this FIsH!"
+        exec /$FOODBIN >> $LOGFILE 2>&1
+    else
+        ECHOL "ERROR: ABORTED!!!! FOODBIN <$FOODBIN> does not exists or is not marked executable!!"
+    fi
 
     # use adb for debugging
     #/sbin/adbd --root_seclabel=u:r:su:s0 --device_banner=recovery >>$LOGFILE 2>&1
@@ -572,6 +404,11 @@ echo "0" > ${FISH_LED}
 echo "0" > ${WAIT_LED}
 echo "255" > ${BOOT_LED}
 
+# set selinux to its previous state
+ECHOL "Will set SELinux back to: <$SELINUXBOOT>"
+EXECL setenforce $SELINUXBOOT
+ECHOL "${_DT} - selinux is now: <$($BUSYBOX getenforce)>"
+
 # remount everything RO again for a normal boot
 ${MOUNT} -o remount,ro rootfs /
-echo "${_DT} - $0 ended without booting into FIsH" >> /$LOGFILE
+$ECHO "${_DT} - $0 ended without booting into FIsH" >> /$LOGFILE
