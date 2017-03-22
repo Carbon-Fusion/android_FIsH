@@ -42,10 +42,11 @@ echo "*********************************************************************"
 # The full URL to the busybox version compatible to your device:
 BUSYBOXURI="https://busybox.net/downloads/binaries/1.26.2-defconfig-multiarch/busybox-armv6l"
 
-# the required android version -> have to match the fish you package 
+# the required android sdk version -> have to match the fish you package 
 # (e.g. TWRP have to be compatible with that version)
 # This version here means the STOCK ROM version you expect for this package!
-REQBUILD="5.1"
+# find the correct SDK version e.g. here: https://en.wikipedia.org/wiki/Android_version_history
+MINSDK="22"
 
 # minimal required SuperSU version. TRUST me u will encounter problems with >2.79!
 # well 2.67 should work but i will not tell anyone ;) (totally untested)
@@ -79,15 +80,25 @@ F_ERR(){
         echo "-> command ended successfully ($1)"
     fi
 }
-#echo "############# waiting for a connected adb device"
-#adb wait-for-device
+
 echo "############# checking Android version"
-AVER=$(adb shell getprop ro.build.version.release| tr -d '\r')
-if [ "$AVER" != "$REQBUILD" ];then
-    echo "ERROR! You have Android $AVER running but $REQBUILD is required. FIsH will not be able to boot! ABORTED."
+AVER=$(adb shell getprop ro.build.version.sdk| tr -d '\r')
+if [ "$AVER" < "$MINSDK" ];then
+    echo -e "\n\n***************************************************************"
+    echo "ERROR! You have Android $AVER running but $MINSDK is required. FIsH will not be able to boot! ABORTED."
+    echo -e "***************************************************************\n\n"
     exit 3
 else
-    echo "-> Matching required Android version: $REQBUILD"
+    if [ "$AVER" > "$MINSDK" ];then
+        echo -e "\n\n***************************************************************"
+        echo "ERROR: Your SDK version ($AVER) is HIGHER then $MINSDK"
+        echo -e "This check ensures that the FISHFOOD is compatible with the\nramdisk we hijack!"
+        echo "You can adjust MINSDK but ensure the FISHFOOD is compatible first!"
+        echo "***************************************************************\n\n"
+        exit 3
+    else
+        echo "-> Good. Matching exact the required Android SDK: $MINSDK"
+    fi
 fi
 
 echo "############# checking SuperSU version"
