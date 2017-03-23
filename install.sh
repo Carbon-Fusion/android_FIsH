@@ -83,13 +83,13 @@ F_ERR(){
 
 echo "############# checking Android version"
 AVER=$(adb shell getprop ro.build.version.sdk| tr -d '\r')
-if [ "$AVER" < "$MINSDK" ];then
+if [ "$AVER" -lt "$MINSDK" ];then
     echo -e "\n\n***************************************************************"
     echo "ERROR! You have Android $AVER running but $MINSDK is required. FIsH will not be able to boot! ABORTED."
     echo -e "***************************************************************\n\n"
     exit 3
 else
-    if [ "$AVER" > "$MINSDK" ];then
+    if [ "$AVER" -gt "$MINSDK" ];then
         echo -e "\n\n***************************************************************"
         echo "ERROR: Your SDK version ($AVER) is HIGHER then $MINSDK"
         echo -e "This check ensures that the FISHFOOD is compatible with the\nramdisk we hijack!"
