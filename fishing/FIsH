@@ -54,19 +54,21 @@ AREL=$(getprop ro.com.google.gmsversion| tr -d '\r')
 ABUILD=$(getprop ro.build.date| tr -d '\r')
 AFP=$(getprop ro.build.fingerprint| tr -d '\r')
 ASDK=$(getprop ro.build.version.sdk| tr -d '\r')
+SUVER=$(su -v|cut -d ":" -f1 |tr -d '.'| tr -d '\r')
 
-echo "${_DT} - Detected Android version:" >> $LOGFILE
+echo "${_DT} - Detected versions:" >> $LOGFILE
 echo -e "\tAndroid: $AVER" >> $LOGFILE
 echo -e "\tRelease level: $AREL" >> $LOGFILE
 echo -e "\tBuild date: $ABUILD" >> $LOGFILE
 echo -e "\tFingerprint: $AFP" >> $LOGFILE
 echo -e "\tSDK Level: $ASDK" >> $LOGFILE
+echo -e "\tSU version: $SUVER" >> $LOGFILE
 
 # this requires a patched /system with SuperSU but is required for everything in here:
 # selinux=permissive
 # we will save the default selinux mode for your device to not leaving your STOCK ROM
 # to permissive if u may don't want to.
-SELINUXBOOT=$(getenforce 0 |tr -d '\r')
+SELINUXBOOT=$(getenforce |tr -d '\r')
 echo "${_DT} - booted selinux mode <$(getenforce)>" >> /$LOGFILE
 setenforce 0
 echo "${_DT} - selinux is now: <$(getenforce)>" >> /$LOGFILE
