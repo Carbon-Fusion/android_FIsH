@@ -112,11 +112,21 @@ else
 fi
 
 echo "############# temporary disable SELinux"
+CURSELINUX=$(adb shell getenforce |tr -d '\r')
 RET=$(adb shell 'su -c setenforce 0; echo err=$?' | grep err=|tr -d '\r')
 F_ERR $RET
 SEL="$(adb shell getenforce|tr -d '\r')"
 echo "SELinux mode: $SEL"
 [ "$SEL" != "Permissive" ]&& echo 'ABORTED!!! YOU CAN NOT GET PERMISSIVE SELINUX MODE!' && exit
+
+# check if we run in testing mode and exit
+if [ "$1" == "--check" ];then
+    echo "... restoring SELinux mode to $CURSELINUX"
+    adb shell "su -c setenforce $CURSELINUX"
+    echo -e "\n\nTests finished! Check the above output!! Exiting here because in checking mode. Nothing installed.\n\n"
+    exit
+fi
+
 echo "############# remount /system"
 RET=$(adb shell "su -c 'mount -oremount,rw /system; echo err=$?'" | grep err=|tr -d '\r') # bullshit.. mount do not return a valid errorcode!
 #F_ERR $RET
@@ -144,6 +154,9 @@ F_ERR $RET
 echo "############# remount /system RO again"
 RET=$(adb shell 'su -c mount -oremount,ro /system; echo err=$?' | grep err=|tr -d '\r') # bullshit.. mount do not return a valid errorcode!
 #F_ERR $RET
+echo "############# restoring SELinux mode to $CURSELINUX"
+RET=$(adb shell "su -c setenforce $CURSELINUX; echo err=$?" | grep err= |tr -d '\r')
+F_ERR $RET
 echo "ALL DONE! Reboot and enjoy the FIsH."
 echo
 echo -e "Get support on IRC:\n"
