@@ -123,7 +123,7 @@ echo "SELinux mode: $SEL"
 if [ "$1" == "--check" ];then
     echo "... restoring SELinux mode to $CURSELINUX"
     adb shell "su -c setenforce $CURSELINUX"
-    echo -e "\n\nTests finished! Check the above output!! Exiting here because in checking mode. Nothing installed.\n\n"
+    echo -e "\n\nTests finished! Check the above output!! Exiting here because in checking mode. Nothing got installed.\n\n"
     exit
 fi
 
