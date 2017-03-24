@@ -1,0 +1,181 @@
+[SIZE="5"]About[/SIZE]
+
+write some beautiful own words here ;)
+
+
+[SIZE="5"]Requirements[/SIZE]
+
+Here are the pre-requirements you have to met!
+If you can't get them: [B][U]Close this page and FORGET it (until the day you met those reqs)![/U][/B]
+
+Here are the 2 simple requirements you have to met:
+
+[LIST]
+[*][B]1. root by SuperSU >=v2.76[/B] (greater or equal v2.76)
+--> to test this requirement just start the installer of FIsH with --check (see next lines) which will check for all requirements and abort if its not possible
+--> for many devices - if not all - this means you HAVE TO downgrade/install LL. It also means that you have to upgrade your SuperSU to this version by e.g. FlashFire if you have a lower version installed!
+--> SU by phh is NOT supported => It needs a modified /boot and this would void the boot signing chain!
+--> Magisk is NOT supported => It needs a modified /boot and this would void the boot signing chain!
+--> I will NOT provide downgrading guides there are plenty of them so search and read.
+--> I will NOT provide any guides in rooting your device
+--> Before you think about downgrading to LL read about ANTI-ROLLBACK protection some devices and may have! Anti-Rollback means you CAN NOT downgrade - it would HARD-BRICK your device (wtf thinking the vendors who we are?? Is this even legal?!)! Check that before!!
+[*][B]2. you have to be able to disable SELinux[/B] in your booted Android
+--> You do NOT need to set SELinux [B]permanently[/B] to permissive. Just [B][U]CHECK[/U][/B] if you [B][U]COULD[/U][/B] get it [B][U]MANUALLY[/U][/B]. If you can get it OK. If not.. you obviously have not full root access but check the forums maybe there is something you can do about this.
+--> I will NOT provide any guides enabling SELinux but some lines later you will see how u can execute the very simple check
+--> to test this requirement just start the installer of FIsH with --check (see next lines) which will check for all requirements and abort if its not possible
+[/LIST]
+
+Those above are hard facts so it may NEVER work with MM. Google has changed the way on how the boot chain will be verified and that means changes in /system will void it from now on.
+If MM can get fully rooted somehow/somewhen on your device with SuperSU installed and you are able to disable SELinux the method will work there as well.
+
+If you can not meet ALL of the above 2 requirements lay down and cry. 
+For the others: calm down and read on!
+
+[B]You can simply test those both requirements by downloading the FIsH package and execute the installer with the following test parameter:
+
+[SIZE="4"][/B][COLOR="blue"][B]./install.sh --check[/B][/COLOR][/SIZE]
+
+This way nothing get installed but you will see if it would work on your device or not.
+
+[SIZE="5"][COLOR="Red"]Limitations![/COLOR][/SIZE]
+
+Keep in mind what I said above: FIsH does NOT unlock your bootloader!
+That means with TWRP-in-FIsH you can [B][U]NOT[/U][/B]:
+[LIST]
+[*]Install a custom ROM like CM/Lineage (this will modify boot = SOFT-BRICK)
+[*]Install a custom Kernel (this will modify boot = SOFT-BRICK)
+[*]Install a custom recovery (this will modify recovery = may SOFT-BRICK)
+[*]In short: do nothing which modifies boot or recovery partitions. Those changes will BREAK your boot signing chain.
+[*]You can of course flash everything which is modifying /system /data only (e.g. xposed, Audio mods, etc...)
+[*]You're able to backup and restore as well of course and doing any other modifications which you may can't while the Android system is running.
+[/LIST]
+
+
+[U][SIZE="4"]Download[/SIZE][/U]
+
+READ THE [COLOR="red"][B][U]REQUIREMENTS[/U][/B][/COLOR] above before proceeding!
+Then [B][U][COLOR="red"]UNDERSTAND[/COLOR][/U][/B] the requirements before proceeding! <-- omg this is crucial important!!!! Ensure that you really do not skip this step!
+
+READ THE [COLOR="red"][B][U]LIMITATIONS[/U][/B][/COLOR] above before proceeding!
+Then [B][U][COLOR="red"]UNDERSTAND[/COLOR][/U][/B] the limitations before proceeding! <-- omg this is crucial important!!!! Ensure that you really do not skip this step!
+
+... and [B][U]NEVER[/U][/B] ask for ETA's! ;)
+
+if you can say: 
+[B][I]Yes! I have read and [U]totally[/U] understood the [U]limitations[/U] AND the [U]requirements[/U]![/I][/B] 
+then proceed. Otherwise read again until you got it.
+[HIDE]Keep in mind that this is a HACK. It may soft-brick your device. you have been warned! 
+The concept is the same for all models but again no guarantees here for anything. 
+There is [B][U]ALWAYS[/U][/B] a risk and you should better [B][U]backup[/U][/B] what you do not want to loose before starting downloading this.
+
+Go to the [B][U]DOWNLOADS[/U][/B] tab in this thread.
+[/HIDE]
+
+[U][SIZE="4"]Installation (Linux)[/U][/SIZE]
+
+You can just install any newer version over an old one.
+
+[LIST=1]
+[*]boot Android and connect USB cable
+[*]download the newest version to your PC and open a terminal in that directory
+[*]tar xzf TWRP-in-FIsH*.tgz
+[*]cd android_FIsH
+[*]./install.sh
+[*]check the output of that script. you should not see any errors there (hopefully)
+[/LIST]
+
+[U][SIZE="4"]Installation (Windows)[/SIZE]
+[/U]
+use [URL="http://tinyurl.com/FWULatXDA"]FWUL[/URL] or be patient.. maybe i or someone else release an installer... maybe...
+
+
+[U][SIZE="4"]First run (no PC required)[/U][/SIZE]
+
+This FIsH gets installed [B]PERMANENTLY[/B]! That means:
+You can boot up TWRP the same way as described here again without re-installing.
+If you re-install your STOCK image you have to re-install TWRPinFIsH as well.
+
+[LIST=1]
+[*]reboot Android
+[*]you should now see: LED goes from blue to [U][B][COLOR="green"][U]GREEN[/U][/COLOR][/B][/U]
+[*]NOW [B]directly[/B] when u see this [COLOR="green"][B][U]GREEN[/U][/B][/COLOR] LED press [B]VOLUME DOWN [/B]and [B]do NOT release[/B]
+[*]wait [B]until the device vibrates[/B] and the LED changed to [COLOR="red"][B][U]RED[/U][/B][/COLOR]. Then release the Volume Down button.
+[*]Wait until FIsH completed and TWRP should be shown --> This means FIsH has done it's job well!
+[*]This is a good time to do a full backup isn't it ? ;) Manually mount the SYSTEM partition as it gets not auto mounted atm and do a full backup
+[*]reboot from here (safely ignore the msg "no OS installed" and reboot anyways) and you should see Android booting (hopefully ... if not see bottom)
+[/LIST]
+
+[U][SIZE="4"]Daily Usage (no PC required)[/U][/SIZE]
+
+[LIST=1]
+[*]reboot Android
+[*]you should now see: LED goes from blue to [U][B][COLOR="green"][U]GREEN[/U][/COLOR][/B][/U]
+[*]NOW [B]directly[/B] when u see this [COLOR="green"][B][U]GREEN[/U][/B][/COLOR] LED press [B]VOLUME DOWN [/B]and [B]do NOT release[/B]
+[*]wait [B]until the device vibrates[/B] and the LED changed to [COLOR="red"][B][U]RED[/U][/B][/COLOR]. Then release the Volume Down button.
+[*]Wait until FIsH completed and TWRP should be shown --> This means FIsH is doing it's job still very well :)
+[*][COLOR="red"][B][U]AGAIN[/U][/B]: keep your mind up! You HAVE to ensure that whatever you do and whatever you flash -> [B][U]NEVER TOUCH BOOT/RECOVERY[/U][/B]! If you flash a ZIP ensure first that it do not modify them! Otherwise you WILL [U][B]softbrick[/B][/U]. You have been warned (several times now)[/COLOR]
+[/LIST]
+
+[U][SIZE="4"]Trouble / Bootloop fix[/SIZE]
+[/U]if you encounter a bootloop (should never happen but who knows) you have 3 choices at least: 
+[LIST=1]
+[*]Option 1a: (TWRP-Bootloop) Within TWRP open Advanced -> File Manager -> Goto: /system/su.d and click "select" button -> Delete
+Option 1b: (TWRP-Bootloop) From your PC: [COLOR="Blue"]adb shell rm -rf /system/su.d/[/COLOR] 
+[B][U]Important[/U][/B]: Catch the fish log (see next topic)
+[*]Option 2 (this works also for a bootloop without twrp): boot into download mode and use [URL="https://github.com/Lekensteyn/lglaf"]LGLaf[/URL] to get a shell
+then:
+[COLOR="Blue"]setenforce 0[/COLOR] <-- if that doesn't work you may have to do a FULL restore to stock
+[COLOR="blue"]mount -oremount,rw /system
+rm -rf /system/su.d/[/COLOR]
+reboot. You are out of the bootloop.
+[B][U]Important[/U][/B]: Catch the fish log (see next topic)
+[*]Option 3: Last resort: Reflash STOCK. sorry.. there is always a risk..
+[/LIST]
+
+[U]Catch the FIsH logs[/U][LIST]
+[*]when in TWRP (or other ramdisk providing adb shell):
+[COLOR="Blue"]adb shell "cat /cache/fish/fish.log"[/COLOR]
+[COLOR="Blue"]adb shell "cat /tmp/recovery.log"[/COLOR]
+[*]OR - when in Android:
+[COLOR="Blue"]adb shell "su -c cat /cache/fish/fish.log"[/COLOR]
+[COLOR="Blue"]adb shell "su -c cat /cache/fish/fish.log.old"[/COLOR]
+[COLOR="Blue"]adb shell "su -c tar cvzf recoverylogs.tgz /cache/recovery"[/COLOR]
+[COLOR="Blue"]adb pull recoverylogs.tgz[/COLOR]
+[*]Upload the output to [url]https://paste.omnirom.org[/url] and paste the link in the IRC channel (see next topic)
+[/LIST]
+
+[U][SIZE="4"]Support / IRC Channel[/SIZE]
+[/U]IRC means Internet Relay Chat and you will get best support here only.
+Choose how to get in:
+[LIST]
+[*][B]PC[/B] ([URL="https://hexchat.github.io/"]HexChat[/URL] and [URL="http://www.pidgin.im/"]Pidgin[/URL] are only 2 of them! This list is not complete!)
+[*][B]Android[/B] ([URL="https://play.google.com/store/apps/details?id=org.yaaic"]Yaaic[/URL], [URL="https://play.google.com/store/apps/details?id=net.andchat"]AndChat[/URL], [URL="https://play.google.com/store/apps/details?id=com.fusionx.lightirc"]HoloIRC[/URL], [URL="https://play.google.com/store/apps/details?id=com.androirc"]AndroIRC[/URL] are only a few of them! This list is not complete!)
+[*][B]Web[/B] ([URL="https://kiwiirc.com/client"]KiwiIRC-Web[/URL],[URL="http://webchat.freenode.net/?channels=Carbon-user"]FreenodeWebchat[/URL]])
+
+[*]When you have to choose a channel it is: [B][I]#Carbon-user[/I][/B]
+[*]When you will be asked for a server network choose: [B][I]freenode[/I][/B]
+[/LIST]
+
+[COLOR="red"][SIZE="4"][B][U]Known issues (may never get fixed)[/U][/B][/SIZE]
+[/COLOR]
+Due to the fact that FIsH is a BRUTAL hijack of the booting process several things may not work as expected.
+This will normally not harm anything but you have to know about.
+
+[U]ZIP / ROM flashing:[/U]
+omg really you wanna hear that again? OK: DON'T TOUCH BOOT / RECOVERY. And you be safe.
+When you try to install a ROM it will modify at least  BOOT. That means soft-brick!
+When you try to install a custom Kernel.. omg really? It will definitively SOFT-BRICK! Maybe you should read the limitations again?? :p
+When you try to install a ZIP like xposed, supersu, Vipermod and others ensure that those are not modifying BOOT or RECOVERY partitions. For those mentioned it would be very unlikely but who knows.
+
+[U]XXXXXX partition:[/U]
+cannot be mounted - even not manually. You have to live with it.
+
+
+[U][SIZE="5"]Credits (without them - no FIsH!!!)[/SIZE][/U]
+If you feel that someone / you is missing on this list lemme know!
+[LIST]
+[*]Chainfire for [URL="https://forum.xda-developers.com/apps/supersu/stable-2016-09-01supersu-v2-78-release-t3452703"]SuperSU[/URL]! This is the main part of FIsH.
+[*]TeamWin for [URL="http://twrp.me"]TWRP[/URL]
+[*]@cray_Doze, @dssmex, @Aaahh and @KeiranFTW for their hijack implementations (e.g. [url]https://forum.xda-developers.com/showthread.php?t=2608408[/url], [URL="https://forum.xda-developers.com/verizon-g4/development/twrp-twrp-lg-g4-bl-locked-untested-t3481967"]first steps to a G4 hijack[/URL])
+[*]steadfasterX for the [URL="https://forum.xda-developers.com/android/software-hacking/locked-fish-hack-to-boot-want-device-t3578373"]android FIsH [/URL]! ;)
+[/LIST]
