@@ -250,9 +250,14 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
                 if [ $pid -eq $PID ]||[ $pid -eq 1 ];then
                     ECHOL "skipped to kill excluded pid $pid"
                 else
-                    #ECHOL kill disabled
-                    ECHOL "Trying to kill $($PS -T -o pid,comm,args | $GREP $pid)"
-                    EXECL $KILL -9 $pid
+                    if [ ! -z $pid ];then
+                        #ECHOL kill disabled
+                        echo "Trying to kill"
+                        $PS -T -o pid,comm,args | $GREP $pid >> $LOGFILE
+                        $KILL -9 $pid >> $LOGFILE 2>&1
+                    else
+                        ECHOL "Empty pid skipped..!"
+                    fi
                 fi
             done
             EXECL ${UMOUNT} $i || EXECL ${UMOUNT} -f $i || EXECL ${UMOUNT} -l $i
