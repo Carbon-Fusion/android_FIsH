@@ -88,7 +88,7 @@ $DMESG > ${LOGPATH}/dmesg.log
 # trigger vibration so user can release buttons now!
 echo '200' > $VIBRATE
 
-${PS} > ${LOGPATH}/ps.log
+$PS -T -o pid,comm,args > ${LOGPATH}/ps.log
 ${CHMOD} 660 ${LOGPATH}/ps.log
 
 # check FIsH flag
@@ -195,7 +195,7 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
 
     # Kill remaining processes under /sbin
     ECHOL "### Kill /sbin processes..."
-    ${PS} |  ${GREP} /sbin >> $LOGFILE
+    $PS -T -o pid,comm,args |  ${GREP} /sbin >> $LOGFILE
     for RUNNINGPRC in $(${PS} | ${GREP} /sbin | ${GREP} -v grep | $AWK '{print $1}' )
     do
     	EXECL ${KILL} -9 ${RUNNINGPRC}
@@ -250,8 +250,14 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
                 if [ $pid -eq $PID ]||[ $pid -eq 1 ];then
                     ECHOL "skipped to kill excluded pid $pid"
                 else
-                    #ECHOL kill disabled
-                    EXECL $KILL -9 $pid
+                    if [ ! -z $pid ];then
+                        #ECHOL kill disabled
+                        echo "Trying to kill"
+                        $PS -T -o pid,comm,args | $GREP $pid >> $LOGFILE
+                        $KILL -9 $pid >> $LOGFILE 2>&1
+                    else
+                        ECHOL "Empty pid skipped..!"
+                    fi
                 fi
             done
             EXECL ${UMOUNT} $i || EXECL ${UMOUNT} -f $i || EXECL ${UMOUNT} -l $i
@@ -324,7 +330,7 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     
     # log process before extract ramdisk
     echo -e "\n\n ***** processes before extracting ramdisk ***** \n" >> $LOGFILE
-    ${PS} >> $LOGFILE
+    $PS -T -o pid,comm,args >> $LOGFILE
     echo -e "\n\n ***** directories before extracting ramdisk ***** \n-e " >> $LOGFILE
     ${LS} -la >> $LOGFILE
     
@@ -346,7 +352,7 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     ECHOL "########### Executing the FIsHFOOD! YOU SHOULD SMELL THE FIsH ALREADY!" 
 
     echo -e "\n\n ***** process before exec init ***** \n" >> $LOGFILE 
-    ${PS} >> $LOGFILE 
+    $PS -T -o pid,comm,args >> $LOGFILE 
 
     echo -e "\n\n ***** lsof before extracting ramdisk ***** \n" >> $LOGFILE
     ${LSOF} >> $LOGFILE
@@ -367,7 +373,7 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
 
     # Kill remaining processes under /sbin again just to be sure
     ECHOL "### Kill /sbin processes (again!)..."
-    ${PS} |  ${GREP} /sbin >> $LOGFILE
+    $PS -T -o pid,comm,args|  ${GREP} /sbin >> $LOGFILE
     for RUNNINGPRC in $(${PS} | ${GREP} /sbin | ${GREP} -v grep | $AWK '{print $1}' )
     do
     	EXECL ${KILL} -9 ${RUNNINGPRC}
