@@ -177,5 +177,5 @@ If you feel that someone / you is missing on this list lemme know!
 [*]Chainfire for [URL="https://forum.xda-developers.com/apps/supersu/stable-2016-09-01supersu-v2-78-release-t3452703"]SuperSU[/URL]! This is the main part of FIsH.
 [*]TeamWin for [URL="http://twrp.me"]TWRP[/URL]
 [*]@cray_Doze, @dssmex, @Aaahh and @KeiranFTW for their hijack implementations (e.g. [url]https://forum.xda-developers.com/showthread.php?t=2608408[/url], [URL="https://forum.xda-developers.com/verizon-g4/development/twrp-twrp-lg-g4-bl-locked-untested-t3481967"]first steps to a G4 hijack[/URL])
-[*]steadfasterX for the [URL="https://forum.xda-developers.com/android/software-hacking/locked-fish-hack-to-boot-want-device-t3578373"]android FIsH [/URL]! ;)
+[*]@steadfasterX for the [URL="https://forum.xda-developers.com/android/software-hacking/locked-fish-hack-to-boot-want-device-t3578373"]android FIsH [/URL]! ;)
 [/LIST]
