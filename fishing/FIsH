@@ -111,7 +111,7 @@ else
     fi
 fi
 
-# Boot FIsH food if it exists
+# Boot FIsH food if it exists (AND key pressed or flag set)
 EXECL cd /
 if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     ECHOL "### ${RAMDISK} exists..."
@@ -126,7 +126,7 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     # notify that we will be able to boot the FOOD because the desired ramdisk exists
     echo "0" > ${WAIT_LED}
     echo "255" > ${FISH_LED}
-    ${SLEEP} 1
+    #${SLEEP} 1
 
     ECHOL "### Checking device model..."
     MODEL=$(getprop ro.product.model)
