@@ -84,6 +84,68 @@ EXECL(){
 	return ${_RET}
 }
 
+# stop services with amount of tries as an argument
+F_STOPSVCS(){
+    AMOUNT=$1
+    
+    ECHOL "### stop init services..."
+    ECHOL "All service states before:"
+    getprop | ${GREP} -E '^\[init\.svc\..*\]:' >> $LOGFILE
+  
+    [ -z "$AMOUNT" ]&& AMOUNT=1
+    
+    for SVCRUNNING in $(getprop | ${GREP} -E '^\[init\.svc\..*\]: \[running\]' | ${GREP} -v ueventd)
+    do
+        # set counter
+        CNT=0
+        SVCNAME=$(${EXPR} ${SVCRUNNING} : '\[init\.svc\.\(.*\)\]:.*')
+        # try to stop a service it up to 3 times (we cannot get a valid service error state so this way..)
+        while [ $CNT -lt 1 ];do
+            if [ ! -z "$SVCNAME" ];then
+                EXECL stop ${SVCNAME}
+                CNT=$((CNT +1))
+                ECHOL "increased counter for $SVCNAME to $CNT"
+            else
+                # break out
+                CNT=99
+            fi
+        done
+    done
+    ECHOL "All service states after:"
+    getprop | ${GREP} -E '^\[init\.svc\..*\]:' >> $LOGFILE
+}
+
+# unmount a list of mount points given as arg. order is important!
+F_UMOUNT(){
+    MOUNTS="$1"
+    if [ -z "$MOUNTS" ];then
+        ECHOL "ERROR: MISSING MOUNTS ARG FOR F_UMOUNT!!"
+    else
+        # umount given list
+        for i in $MOUNTS;do
+            if [ -e "$i" ];then
+                ECHOL "### killing all processes accessing $i (if any can be found by fuser)"
+                for pid in $($FUSER -m $i);do
+                    if [ $pid -eq $PID ]||[ $pid -eq 1 ];then
+                        ECHOL "skipped to kill excluded pid $pid"
+                    else
+                        if [ ! -z $pid ];then
+                            #ECHOL kill disabled
+                            echo "Trying to kill"
+                            $PS -T -o pid,comm,args | $GREP " $pid ">> $LOGFILE
+                            $KILL -9 $pid >> $LOGFILE 2>&1
+                        else
+                            ECHOL "Empty pid skipped..!"
+                        fi
+                    fi
+                done
+                EXECL ${UMOUNT} $i || EXECL ${UMOUNT} -f $i || EXECL ${UMOUNT} -l $i
+            else
+                ECHOL "Skipped requested unmount because it does not exist ($i)"
+            fi
+        done
+    fi
+}
 
 ### FIsH definitions
 
@@ -93,4 +155,7 @@ WORKDIR="${LOGPATH}"
 BTMGRPATH="/res/fish"
 BUSYBOX="${BTMGRPATH}/busybox"
 _DT=$(${BUSYBOX} date +"%F %T")
+
+
+
 

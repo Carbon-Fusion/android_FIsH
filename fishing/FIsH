@@ -133,50 +133,21 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     VERSION=$(getprop ro.product.name)
     MODEL2=$(getprop ro.build.product)
     ECHOL "Model found: $MODEL / $MODEL2 ($VERSION)"
-    
-    # remount rootfs to rw.
-    ECHOL "### remount rootfs to rw..."
-    EXECL ${MOUNT} -o remount,rw rootfs /	
-
-    # Install exfat module to support exfat file system
-	ECHOL "### Install exfat module..."
-    LIBP=/system/lib/modules
-    EXECL lsmod |grep fat
-    if [ $? -ne 0 ];then
-        if [ "$LIBP/exfatfs.ko" ];then
-            EXECL insmod $LIBP/exfatfs.ko
-        else
-            [ "$LIBP/texfat.ko" ]&& EXECL insmod $LIBP/texfat.ko
-        fi
-    else
-        ECHOL "### Skipped exfat module (already loaded)..."
-    fi
 
     # Stop init services.
-    ECHOL "### stop init services..."
-    ECHOL "All service states before:"
-    getprop | ${GREP} -E '^\[init\.svc\..*\]:' >> $LOGFILE
-    
-    for SVCRUNNING in $(getprop | ${GREP} -E '^\[init\.svc\..*\]: \[running\]' | ${GREP} -v ueventd)
-    do
-        # set counter
-        CNT=0
-    	SVCNAME=$(${EXPR} ${SVCRUNNING} : '\[init\.svc\.\(.*\)\]:.*')
-        # try to stop a service it up to 3 times (we cannot get a valid service error state so this way..)
-        while [ $CNT -lt 3 ];do
-            if [ ! -z "$SVCNAME" ];then
-                EXECL stop ${SVCNAME}
-                CNT=$((CNT +1))
-                ECHOL "increased counter for $SVCNAME to $CNT"
-            else
-                # break out
-                CNT=99
-            fi
-        done
-    done
+    F_STOPSVCS 1
         
-    ECHOL "All service states after:"
-    getprop | ${GREP} -E '^\[init\.svc\..*\]:' >> $LOGFILE
+    # umount partitions, stripping the ramdisk to bare metal
+    ECHOL " ### Unmounting partitions but before: here all current mounts"
+    $MOUNT >> $LOGFILE
+    
+    F_UMOUNT "$MOUNTS"
+    
+    ECHOL " ### Partitions after umounting"
+    $MOUNT >> /$LOGFILE
+    
+    # Stop init services again to catch those not stopped on the first try
+    F_STOPSVCS 1
 
     # Kill remaining processes under /system/bin
     ECHOL "### Kill /system/bin and /system/xbin processes (ps based)..."
@@ -201,21 +172,24 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     	EXECL ${KILL} -9 ${RUNNINGPRC}
     done
 
-    # MOVED to CALLMEFISH
-    ### Moving Busybox to /res
-    #ECHOL "### moving busybox.."
-    #EXECL ${RM} -rf /res
-    #EXECL ${MKDIR} /res 
-    #EXECL ${CHOWN} 0.0 /res
-    #EXECL ${CHMOD} 0777 /res
-    #EXECL ${CP} ${BUSYBOX} /res
-    #BUSYBOX="$TMPFISHDIR/busybox"
-    # Setup busybox commands to the new path 
-    #CMD_SETUP
-    
-    ## Move and decompress ramdisk to /res
-    #ECHOL "### moving ${RAMDISK}..."
-    #EXECL ${CP} ${BTMGRPATH}/${RAMDISK} /res
+    # remount rootfs to rw.
+    ECHOL "### remount rootfs to rw..."
+    EXECL ${MOUNT} -o remount,rw rootfs /	
+
+    # Install exfat module to support exfat file system
+	ECHOL "### Install exfat module..."
+    LIBP=/system/lib/modules
+    EXECL lsmod |grep fat
+    if [ $? -ne 0 ];then
+        if [ "$LIBP/exfatfs.ko" ];then
+            EXECL insmod $LIBP/exfatfs.ko
+        else
+            [ "$LIBP/texfat.ko" ]&& EXECL insmod $LIBP/texfat.ko
+        fi
+    else
+        ECHOL "### Skipped exfat module (already loaded)..."
+    fi
+
     ECHOL "### decompress ${RAMDISK}..."
     EXECL ${GZIP} -d $TMPFISHDIR/${RAMDISK}
     $LS -la $TMPFISHDIR >> $LOGFILE
@@ -231,75 +205,6 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     lsmod >> $LOGFILE
     $BUSYBOX lsmod >> $LOGFILE
 
-    # umount partitions, stripping the ramdisk to bare metal
-    ECHOL " ### Unmounting partitions but before: here all current mounts"
-    $MOUNT >> $LOGFILE
-    
-    #in order to completely remove them later we remount them rw before
-    #for i in $($MOUNT |$GREP 'ro,'|grep -v remount-ro |$SED 's/ /|/g' | cut -d '|' -f3);do
-    #    ECHOL "### Remounting $i RW"
-    #    EXECL $MOUNT -oremount,rw $i
-    #done
-    EXECL $MOUNT -oremount,rw /system
-    
-    # umount all normal mounts (no /system yet!)
-    for i in $MOUNTS;do
-        if [ -e "$i" ];then
-            ECHOL "### killing all processes accessing $i (if any can be found by fuser)"
-            for pid in $($FUSER -m $i);do
-                if [ $pid -eq $PID ]||[ $pid -eq 1 ];then
-                    ECHOL "skipped to kill excluded pid $pid"
-                else
-                    if [ ! -z $pid ];then
-                        #ECHOL kill disabled
-                        echo "Trying to kill"
-                        $PS -T -o pid,comm,args | $GREP $pid >> $LOGFILE
-                        $KILL -9 $pid >> $LOGFILE 2>&1
-                    else
-                        ECHOL "Empty pid skipped..!"
-                    fi
-                fi
-            done
-            EXECL ${UMOUNT} $i || EXECL ${UMOUNT} -f $i || EXECL ${UMOUNT} -l $i
-        else
-            ECHOL "Skipped requested unmount because it does not exist ($i)"
-        fi
-    done
-    
-    ECHOL " ### Partitions after umounting"
-    $MOUNT >> /$LOGFILE
-
-    #### EXAMPLE MOUNTS AT BOOT TIME ON LL H815:
-        ###rootfs on / type rootfs (rw,relatime)
-        ###tmpfs on /dev type tmpfs (rw,seclabel,nosuid,relatime,size=1437392k,nr_inodes=359348,mode=755)
-        ###devpts on /dev/pts type devpts (rw,seclabel,relatime,mode=600)
-        ###none on /dev/cpuctl type cgroup (rw,relatime,cpu)
-        ###adb on /dev/usb-ffs/adb type functionfs (rw,relatime)
-        ###proc on /proc type proc (rw,relatime)
-        ###sysfs on /sys type sysfs (rw,seclabel,relatime)
-        ###selinuxfs on /sys/fs/selinux type selinuxfs (rw,relatime)
-        ###debugfs on /sys/kernel/debug type debugfs (rw,relatime)
-        ###none on /sys/fs/cgroup type tmpfs (rw,seclabel,relatime,size=1437392k,nr_inodes=359348,mode=750,gid=1000)
-        ###pstore on /sys/fs/pstore type pstore (rw,relatime)
-        ###none on /acct type cgroup (rw,relatime,cpuacct)
-        ###tmpfs on /mnt/asec type tmpfs (rw,seclabel,relatime,size=1437392k,nr_inodes=359348,mode=755,gid=1000)
-        ###tmpfs on /mnt/obb type tmpfs (rw,seclabel,relatime,size=1437392k,nr_inodes=359348,mode=755,gid=1000)
-        ###/mnt/pstore on /mnt/pstore type pstore (rw,relatime)
-        ###/dev/block/bootdevice/by-name/system on /system type ext4 (ro,seclabel,relatime,data=ordered)
-        ###/dev/block/bootdevice/by-name/cache on /cache type ext4 (rw,seclabel,nosuid,nodev,noatime,noauto_da_alloc,errors=continue,data=ordered)
-        ###/dev/block/bootdevice/by-name/userdata on /data type ext4 (rw,seclabel,nosuid,nodev,noatime,noauto_da_alloc,resuid=1000,errors=continue,data=ordered)
-        ###/dev/block/bootdevice/by-name/persist on /persist type ext4 (rw,seclabel,nosuid,nodev,noatime,noauto_da_alloc,errors=continue,data=ordered)
-        ###/dev/block/bootdevice/by-name/modem on /firmware type vfat (ro,context=u:object_r:firmware_file:s0,relatime,uid=1000,gid=1000,fmask=0337,dmask=0227,codepage=437,iocharset=iso8859-1,shortname=
-        ###lower,errors=remount-ro)
-        ###/dev/block/bootdevice/by-name/sns on /sns type ext4 (rw,seclabel,nosuid,nodev,noatime,noauto_da_alloc,errors=continue,data=ordered)
-        ###/dev/block/bootdevice/by-name/drm on /persist-lg type ext4 (rw,seclabel,nosuid,nodev,noatime,noauto_da_alloc,errors=continue,data=ordered)
-        ###/dev/block/bootdevice/by-name/mpt on /mpt type ext4 (rw,seclabel,nosuid,nodev,noatime,noauto_da_alloc,errors=continue,data=ordered)
-        ###/dev/block/platform/f9824900.sdhci/by-name/cust on /cust type ext4 (ro,seclabel,nosuid,nodev,relatime,noauto_da_alloc,data=ordered)
-        ###/data/media on /mnt/shell/emulated type sdcardfs (rw,nosuid,relatime,uid=1023,gid=1023,derive=legacy)
-        ###/data/media on /storage/emulated/legacy type sdcardfs (rw,nosuid,relatime,uid=1023,gid=1023,derive=legacy)
-        ###tmpfs on /storage/emulated type tmpfs (rw,seclabel,nosuid,nodev,relatime,mode=050,gid=1028)
-
-   
     # prevent bootloops in testing mode 
     if [ "$RUNONCE" -eq 1 ];then
         ECHOL "### RUNONCE DETECTED! WILL REMOVING FIsH FROM NEXT BOOT!!!"
@@ -309,7 +214,10 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
 
     # AS OF HERE NO MORE BUSYBOX SYMLINKS IN $PATH!!!!
     ECHOL "### umounting system  ..."
-    EXECL ${UMOUNT} /system || EXECL ${UMOUNT} -f /system || EXECL ${UMOUNT} -l /system
+    # we need to remount it RW as otherwise we cannot write on it later!
+    EXECL $MOUNT -oremount,rw /system
+    F_UMOUNT "/system"
+#    EXECL ${UMOUNT} /system || EXECL ${UMOUNT} -f /system || EXECL ${UMOUNT} -l /system
     export PATH="/sbin"
     
     # rm symlinks & files.
