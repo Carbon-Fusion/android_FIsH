@@ -134,8 +134,12 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     MODEL2=$(getprop ro.build.product)
     ECHOL "Model found: $MODEL / $MODEL2 ($VERSION)"
 
+    # remount rootfs to rw.
+    ECHOL "### remount rootfs to rw..."
+    EXECL ${MOUNT} -o remount,rw rootfs /
+    
     # Stop init services.
-    F_STOPSVCS 1
+    F_STOPSVCS 2
         
     # umount partitions, stripping the ramdisk to bare metal
     ECHOL " ### Unmounting partitions but before: here all current mounts"
@@ -147,21 +151,21 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     $MOUNT >> /$LOGFILE
     
     # Stop init services again to catch those not stopped on the first try
-    F_STOPSVCS 1
+    #F_STOPSVCS 1
 
     # Kill remaining processes under /system/bin
     ECHOL "### Kill /system/bin and /system/xbin processes (ps based)..."
     ${PS} | e${GREP} '(/system/bin|/system/xbin)' >> $LOGFILE
     for RUNNINGPRC in $(${PS} | e${GREP} '(/system/bin|/system/xbin)' | ${GREP} -v grep | ${GREP} -v $0 | ${AWK} '{print $1}' )
     do
-    	EXECL ${KILL} -9 ${RUNNINGPRC}
+    	EXECL ${KILL} -9 ${RUNNINGPRC} &
     done
     
     ECHOL "### Kill /system/bin and /system/xbin processes (lsof based)..."
     $LSOF | e${GREP} '(/system/bin|/system/xbin)' >> $LOGFILE
     for RUNNINGPRC in $(${LSOF} | e${GREP} '(/system/bin|/system/xbin)' | ${GREP} -v grep | ${GREP} -v $0 | ${AWK} '{print $1}' )
     do
-    	EXECL ${KILL} -9 ${RUNNINGPRC}
+    	EXECL ${KILL} -9 ${RUNNINGPRC} & 
     done
 
     # Kill remaining processes under /sbin
@@ -169,12 +173,8 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     $PS -T -o pid,comm,args |  ${GREP} /sbin >> $LOGFILE
     for RUNNINGPRC in $(${PS} | ${GREP} /sbin | ${GREP} -v grep | $AWK '{print $1}' )
     do
-    	EXECL ${KILL} -9 ${RUNNINGPRC}
+    	EXECL ${KILL} -9 ${RUNNINGPRC} &
     done
-
-    # remount rootfs to rw.
-    ECHOL "### remount rootfs to rw..."
-    EXECL ${MOUNT} -o remount,rw rootfs /	
 
     # Install exfat module to support exfat file system
 	ECHOL "### Install exfat module..."
