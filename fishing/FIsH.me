@@ -129,16 +129,11 @@ F_UMOUNT(){
                     if [ $pid -eq $PID ]||[ $pid -eq 1 ];then
                         ECHOL "skipped to kill excluded pid $pid"
                     else
-                        if [ ! -z $pid ];then
-                            #ECHOL kill disabled
-                            echo "Trying to kill"
-                            $PS -T -o pid,comm,args | $GREP " $pid ">> $LOGFILE
-                            $KILL -9 $pid >> $LOGFILE 2>&1
-                        else
-                            ECHOL "Empty pid skipped..!"
-                        fi
+                        [ ! -z $pid ];then $KILL -9 $pid & >> $LOGFILE 2>&1
                     fi
                 done
+                # give it a short time to breath because we kill what we can in parallel
+                $SLEEP 2
                 EXECL ${UMOUNT} $i || EXECL ${UMOUNT} -f $i || EXECL ${UMOUNT} -l $i
             else
                 ECHOL "Skipped requested unmount because it does not exist ($i)"
