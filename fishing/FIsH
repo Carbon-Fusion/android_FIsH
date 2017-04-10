@@ -80,7 +80,13 @@ echo "0" > ${WAIT_LED}
 
 # Turn on WAIT-led -> NOW the user should press the key combo - until he feels the vibrate and red led!
 echo "255" > ${WAIT_LED}
-$SLEEP $KEYWAIT
+
+# check FIsH flag
+if [ -f /cache/recovery/boot ];then
+    FISH_FLAG=true
+else
+    $SLEEP $KEYWAIT
+fi
     
 # for debugging..
 $DMESG > ${LOGPATH}/dmesg.log
@@ -90,9 +96,6 @@ echo '200' > $VIBRATE
 
 $PS -T -o pid,comm,args > ${LOGPATH}/ps.log
 ${CHMOD} 660 ${LOGPATH}/ps.log
-
-# check FIsH flag
-[ -f /cache/recovery/boot ] && FISH_FLAG=true
 
 # see if we want to start FIsH or not
 if [ "$FISH_FLAG" == "true" ];then
