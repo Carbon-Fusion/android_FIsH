@@ -129,7 +129,7 @@ F_UMOUNT(){
                     if [ $pid -eq $PID ]||[ $pid -eq 1 ];then
                         ECHOL "skipped to kill excluded pid $pid"
                     else
-                        [ ! -z $pid ];then $KILL -9 $pid & >> $LOGFILE 2>&1
+                        [ ! -z $pid ] && $KILL -9 $pid & >> $LOGFILE 2>&1
                     fi
                 done
                 # give it a short time to breath because we kill what we can in parallel
