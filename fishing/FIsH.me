@@ -100,7 +100,7 @@ F_STOPSVCS(){
         CNT=0
         SVCNAME=$(${EXPR} ${SVCRUNNING} : '\[init\.svc\.\(.*\)\]:.*')
         # try to stop a service it up to 3 times (we cannot get a valid service error state so this way..)
-        while [ $CNT -lt 1 ];do
+        while [ $CNT -lt $AMOUNT ];do
             if [ ! -z "$SVCNAME" ];then
                 EXECL stop ${SVCNAME} &
                 CNT=$((CNT +1))
