@@ -256,6 +256,10 @@ if [ -f "${BTMGRPATH}/${RAMDISK}" ];then
     cd /res && EXECL ${CPIO} -i -u "$FOODBIN" < $TMPFISHDIR/${RAMDISK/.gz}
     EXECL $MV /res/$FOODBIN /init
     cd /
+
+    echo -e "\n\n ***** directory before exec init ***** \n" >> $LOGFILE 
+    ${LS} -la >> $LOGFILE
+    
     
     # TODO: validations of the above?! to avoid extraction errors etc..
     
@@ -265,10 +269,10 @@ if [ -f "${BTMGRPATH}/${RAMDISK}" ];then
     echo -e "\n\n ***** process before exec init ***** \n" >> $LOGFILE 
     $PS -T -o pid,comm,args >> $LOGFILE 
 
-    echo -e "\n\n ***** lsof before extracting ramdisk ***** \n" >> $LOGFILE
+    echo -e "\n\n ***** lsof before exec init ***** \n" >> $LOGFILE
     ${LSOF} >> $LOGFILE
 
-    echo -e "\n\n ***** inotifies before extracting ramdisk ***** \n" >> $LOGFILE    
+    echo -e "\n\n ***** inotifies before exec init ***** \n" >> $LOGFILE    
     $PS $($FIND /proc/*/fd/* -type l -lname 'anon_inode:inotify' -print 2> /dev/null | $SED -e 's/^\/proc\/\([0-9]*\)\/.*/\1/')  >> $LOGFILE    
 
     # umount all special mounts
