@@ -113,7 +113,7 @@ fi
 
 # Boot FIsH food if it exists (AND key pressed or flag set)
 EXECL cd /
-if [ -f ${BTMGRPATH}/${RAMDISK} ];then
+if [ -f "${BTMGRPATH}/${RAMDISK}" ];then
     ECHOL "### ${RAMDISK} exists..."
 
     ECHOL "Your FIsHFOOD is: $($CAT ${BTMGRPATH}/fishfood.release)" >> $LOGFILE
