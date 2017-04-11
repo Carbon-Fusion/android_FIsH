@@ -23,8 +23,8 @@
 FISHME=/system/fish/FIsH.me
 FISHPORT=/system/fish/FIsH.porting
 
-[ ! -f $FISHME ] && echo "ERROR missing FIsH.me" && exit 3
-[ ! -f $FISHPORT ] && echo "ERROR missing FIsH.porting" && exit 3
+[ ! -f $FISHME ] && echo "$0 - ERROR missing FIsH.me" >> /dev/kmsg && exit 3
+[ ! -f $FISHPORT ] && echo "$0 - ERROR missing FIsH.porting" >> /dev/kmsg && exit 3
 source $FISHME
 source $FISHPORT
 
@@ -67,7 +67,7 @@ if [ -x /res/fish/busybox ];then
     CMD_SETUP
     
     ECHOL "### calling the FIsH and exit"
-    /res/fish/FIsH &
+    $BUSYBOX sh /res/fish/FIsH &
 else
     ECHOL "### calling the FIsH not possible because busybox install fail"
     EXECL $MOUNT -oremount,ro /

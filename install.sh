@@ -55,20 +55,7 @@ MINSU="279"
 
 ##############################################################################################
 
-# we do not want to distribute busybox to avoid licensing issues so u need to download it:
-echo -e "\n############# Checking for busybox"
-[ ! -f fishing/busybox ] && echo "...downloading busybox" && wget "$BUSYBOXURI" -O fishing/busybox && chmod 755 fishing/busybox
-[ ! -f fishing/busybox ] && echo "ERROR: MISSING BUSYBOX! Download it manually and place it in the directory: ./fishing/ and name it <busybox>" && exit 3
-
-# preparing your system
-adb start-server
-echo -e "Waiting for your device... (you may have to switch to PTP mode on some devices!!)"
-adb wait-for-device
-
-# precheck min requirement adb:
-adb version
-[ $? -ne 0 ]&& echo "ADB is not installed?! Use FWUL (https://tinyurl.com/FWULatXDA) you FOOL! :)" && exit
-
+# error handling
 F_ERR(){
     ERR=${1/*=/}
     [ -z "$ERR" ]&& echo "ERROR IN ERROR HANDLING! $1 was cut down to: $ERR" && exit
@@ -80,6 +67,83 @@ F_ERR(){
         echo "-> command ended successfully ($1)"
     fi
 }
+
+# clean up any previous installation
+F_CLEAN(){
+    echo "############# cleaning"
+    FISHTRASH="/data/local/tmpfish/ /system/su.d/FIsH /system/su.d/callmeFIsH /system/fish/ /res/fish/"
+    F_REMOUNT rw "/system"
+    F_REMOUNT rw "/"
+    for trash in $FISHTRASH;do
+        echo "processing: >$trash<"
+        RET=0
+        RET=$(adb shell "su -c test -e $trash || echo err=1" | cut -d "=" -f 2 |tr -d '\r')
+        if [ "$RET" != "1" ];then
+            echo "--> exists. will be deleted now."
+            RET=$(adb shell "su -c rm -rf $trash || echo err=1" |tr -d '\r')
+            [ ! -z "$RET" ] && echo "WARNING: cleaning ended with $RET !!"
+        fi
+    done
+}
+
+#remount RW a partition
+F_REMOUNT(){
+    WHAT="$1"
+    PARTITION="$2"
+    [ "$WHAT" != "ro" -a "$WHAT" != "rw" ] && echo "ERROR: wrong or missing remount argument!!" && exit 3
+    
+    PEXIST=$(adb shell "su -c test -d $PARTITION || echo err=1")
+    if [ ! -z "$PEXIST" ];then
+        echo "WARNING: $PARTITION IS MISSING OR NOT MOUNTED.."
+    else
+        echo "... remounting $PARTITION in $WHAT mode"
+        adb shell "su -c mount -oremount,${WHAT} $PARTITION || echo err=1 "
+        adb shell "su -c mount |grep ' $PARTITION '"
+        # no valid return code from busybox.
+    fi
+}
+
+# set selinux to permissive
+F_SELPERM(){
+    echo "############# temporary disable SELinux"
+    RET=$(adb shell 'su -c setenforce 0; echo err=$?' | grep err=|tr -d '\r')
+    F_ERR $RET
+    SEL="$(adb shell getenforce|tr -d '\r')"
+    echo "SELinux mode: $SEL"
+    [ "$SEL" != "Permissive" ]&& echo 'ABORTED!!! YOU CAN NOT GET PERMISSIVE SELINUX MODE!' && exit
+}
+
+# we do not want to distribute busybox to avoid licensing issues so u need to download it:
+echo -e "\n############# Checking for busybox"
+[ ! -f fishing/busybox ] && echo "...downloading busybox" && wget "$BUSYBOXURI" -O fishing/busybox && chmod 755 fishing/busybox
+[ ! -f fishing/busybox ] && echo "ERROR: MISSING BUSYBOX! Download it manually and place it in the directory: ./fishing/ and name it <busybox>" && exit 3
+
+# preparing your system
+adb start-server
+echo -e "Waiting for your device... (you may have to switch to PTP mode on some devices!!)"
+adb wait-for-device
+
+# save current selinux state
+CURSELINUX=$(adb shell getenforce |tr -d '\r')
+
+# clean and exit
+if [ "$1" == "--clean" ];then
+    # disable selinux
+    F_SELPERM
+    # clean as requested
+    F_CLEAN
+    echo "############# restoring SELinux mode to $CURSELINUX"
+    RET=$(adb shell "su -c setenforce $CURSELINUX; echo err=$?" | grep err= |tr -d '\r')
+    F_ERR $RET
+    
+    echo -e "\nFinished cleaning and as you choose to clean only I will exit now.\n"
+    exit
+fi
+
+# precheck min requirement adb:
+adb version
+[ $? -ne 0 ]&& echo "ADB is not installed?! Use FWUL (https://tinyurl.com/FWULatXDA) you FOOL! :)" && exit
+
 
 echo "############# checking Android version"
 AVER=$(adb shell getprop ro.build.version.sdk| tr -d '\r')
@@ -111,13 +175,8 @@ else
     exit 3
 fi
 
-echo "############# temporary disable SELinux"
-CURSELINUX=$(adb shell getenforce |tr -d '\r')
-RET=$(adb shell 'su -c setenforce 0; echo err=$?' | grep err=|tr -d '\r')
-F_ERR $RET
-SEL="$(adb shell getenforce|tr -d '\r')"
-echo "SELinux mode: $SEL"
-[ "$SEL" != "Permissive" ]&& echo 'ABORTED!!! YOU CAN NOT GET PERMISSIVE SELINUX MODE!' && exit
+# temporary disable SELinux
+F_SELPERM
 
 # check if we run in testing mode and exit
 if [ "$1" == "--check" ];then
@@ -127,18 +186,9 @@ if [ "$1" == "--check" ];then
     exit
 fi
 
-echo "############# remount /system"
-RET=$(adb shell "su -c 'mount -oremount,rw /system; echo err=$?'" | grep err=|tr -d '\r') # bullshit.. mount do not return a valid errorcode!
-#F_ERR $RET
-echo "############# cleaning"
-RET=$(adb shell 'su -c rm -Rf /data/local/tmpfish/; echo err=$?' | grep err= |tr -d '\r')
-F_ERR $RET
-RET=$(adb shell 'su -c rm -f /system/su.d/FIsH; echo err=$?' | grep err= |tr -d '\r')
-F_ERR $RET
-RET=$(adb shell 'su -c rm -f /system/su.d/callmeFIsH; echo err=$?' | grep err= |tr -d '\r')
-F_ERR $RET
-RET=$(adb shell 'su -c rm -Rf /system/fish; echo err=$?' | grep err= |tr -d '\r')
-F_ERR $RET
+# clean up first
+F_CLEAN
+
 echo "############# creating temporary directory"
 RET=$(adb shell 'su -c mkdir /data/local/tmpfish; echo err=$?' | grep err=|tr -d '\r')
 F_ERR $RET
@@ -157,6 +207,9 @@ RET=$(adb shell 'su -c mount -oremount,ro /system; echo err=$?' | grep err=|tr -
 echo "############# restoring SELinux mode to $CURSELINUX"
 RET=$(adb shell "su -c setenforce $CURSELINUX; echo err=$?" | grep err= |tr -d '\r')
 F_ERR $RET
+echo "############# remounting system partitions to read-only again"
+F_REMOUNT ro "/system"
+F_REMOUNT ro "/"
 echo "ALL DONE! Reboot and enjoy the FIsH."
 echo
 echo -e "Get support on IRC:\n"

@@ -144,6 +144,9 @@ F_KEYPRESS(){
 #       The ORDER is IMPORTANT!
 #       (means u have to umount all submounts first before u can unmount the main one)
 MOUNTS="/acct \
+       /firmware \
+       /cust \
+       /sns \
        /mnt/secure \
        /mnt/asec \
        /mnt/obb \
@@ -158,12 +161,9 @@ MOUNTS="/acct \
        /storage/emulated \
        /data/media \
        /data \
-       /persist \
-       /firmware \
-       /sns \
        /persist-lg \
-       /mpt \
-       /cust"
+       /persist \
+       /mpt"
 
 # device specific mount points - OS special
 # - Porting instructions -

@@ -80,7 +80,13 @@ echo "0" > ${WAIT_LED}
 
 # Turn on WAIT-led -> NOW the user should press the key combo - until he feels the vibrate and red led!
 echo "255" > ${WAIT_LED}
-$SLEEP $KEYWAIT
+
+# check FIsH flag
+if [ -f /cache/recovery/boot ];then
+    FISH_FLAG=true
+else
+    $SLEEP $KEYWAIT
+fi
     
 # for debugging..
 $DMESG > ${LOGPATH}/dmesg.log
@@ -90,9 +96,6 @@ echo '200' > $VIBRATE
 
 $PS -T -o pid,comm,args > ${LOGPATH}/ps.log
 ${CHMOD} 660 ${LOGPATH}/ps.log
-
-# check FIsH flag
-[ -f /cache/recovery/boot ] && FISH_FLAG=true
 
 # see if we want to start FIsH or not
 if [ "$FISH_FLAG" == "true" ];then
@@ -113,7 +116,7 @@ fi
 
 # Boot FIsH food if it exists (AND key pressed or flag set)
 EXECL cd /
-if [ -f ${BTMGRPATH}/${RAMDISK} ];then
+if [ -f "${BTMGRPATH}/${RAMDISK}" ];then
     ECHOL "### ${RAMDISK} exists..."
 
     ECHOL "Your FIsHFOOD is: $($CAT ${BTMGRPATH}/fishfood.release)" >> $LOGFILE
@@ -134,8 +137,12 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     MODEL2=$(getprop ro.build.product)
     ECHOL "Model found: $MODEL / $MODEL2 ($VERSION)"
 
+    # remount rootfs to rw.
+    ECHOL "### remount rootfs to rw..."
+    EXECL ${MOUNT} -o remount,rw rootfs /
+    
     # Stop init services.
-    F_STOPSVCS 1
+    F_STOPSVCS 2
         
     # umount partitions, stripping the ramdisk to bare metal
     ECHOL " ### Unmounting partitions but before: here all current mounts"
@@ -147,21 +154,21 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     $MOUNT >> /$LOGFILE
     
     # Stop init services again to catch those not stopped on the first try
-    F_STOPSVCS 1
+    #F_STOPSVCS 1
 
     # Kill remaining processes under /system/bin
     ECHOL "### Kill /system/bin and /system/xbin processes (ps based)..."
     ${PS} | e${GREP} '(/system/bin|/system/xbin)' >> $LOGFILE
     for RUNNINGPRC in $(${PS} | e${GREP} '(/system/bin|/system/xbin)' | ${GREP} -v grep | ${GREP} -v $0 | ${AWK} '{print $1}' )
     do
-    	EXECL ${KILL} -9 ${RUNNINGPRC}
+    	EXECL ${KILL} -9 ${RUNNINGPRC} &
     done
     
     ECHOL "### Kill /system/bin and /system/xbin processes (lsof based)..."
     $LSOF | e${GREP} '(/system/bin|/system/xbin)' >> $LOGFILE
     for RUNNINGPRC in $(${LSOF} | e${GREP} '(/system/bin|/system/xbin)' | ${GREP} -v grep | ${GREP} -v $0 | ${AWK} '{print $1}' )
     do
-    	EXECL ${KILL} -9 ${RUNNINGPRC}
+    	EXECL ${KILL} -9 ${RUNNINGPRC} & 
     done
 
     # Kill remaining processes under /sbin
@@ -169,12 +176,8 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     $PS -T -o pid,comm,args |  ${GREP} /sbin >> $LOGFILE
     for RUNNINGPRC in $(${PS} | ${GREP} /sbin | ${GREP} -v grep | $AWK '{print $1}' )
     do
-    	EXECL ${KILL} -9 ${RUNNINGPRC}
+    	EXECL ${KILL} -9 ${RUNNINGPRC} &
     done
-
-    # remount rootfs to rw.
-    ECHOL "### remount rootfs to rw..."
-    EXECL ${MOUNT} -o remount,rw rootfs /	
 
     # Install exfat module to support exfat file system
 	ECHOL "### Install exfat module..."
@@ -253,6 +256,10 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     cd /res && EXECL ${CPIO} -i -u "$FOODBIN" < $TMPFISHDIR/${RAMDISK/.gz}
     EXECL $MV /res/$FOODBIN /init
     cd /
+
+    echo -e "\n\n ***** directory before exec init ***** \n" >> $LOGFILE 
+    ${LS} -la >> $LOGFILE
+    
     
     # TODO: validations of the above?! to avoid extraction errors etc..
     
@@ -262,10 +269,10 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     echo -e "\n\n ***** process before exec init ***** \n" >> $LOGFILE 
     $PS -T -o pid,comm,args >> $LOGFILE 
 
-    echo -e "\n\n ***** lsof before extracting ramdisk ***** \n" >> $LOGFILE
+    echo -e "\n\n ***** lsof before exec init ***** \n" >> $LOGFILE
     ${LSOF} >> $LOGFILE
 
-    echo -e "\n\n ***** inotifies before extracting ramdisk ***** \n" >> $LOGFILE    
+    echo -e "\n\n ***** inotifies before exec init ***** \n" >> $LOGFILE    
     $PS $($FIND /proc/*/fd/* -type l -lname 'anon_inode:inotify' -print 2> /dev/null | $SED -e 's/^\/proc\/\([0-9]*\)\/.*/\1/')  >> $LOGFILE    
 
     # umount all special mounts
