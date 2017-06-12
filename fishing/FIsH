@@ -57,6 +57,7 @@ ASDK=$(getprop ro.build.version.sdk| tr -d '\r')
 SUVER=$(su -v|cut -d ":" -f1 |tr -d '.'| tr -d '\r')
 
 echo "${_DT} - Detected versions:" >> $LOGFILE
+echo -e "\tFIsH: $FISHVER" >> $LOGFILE
 echo -e "\tAndroid: $AVER" >> $LOGFILE
 echo -e "\tRelease level: $AREL" >> $LOGFILE
 echo -e "\tBuild date: $ABUILD" >> $LOGFILE
