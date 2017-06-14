@@ -26,6 +26,7 @@
 
 # Command setup
 CMD_SETUP(){
+        ECHO="${BUSYBOX} echo"
     DMESG="${BUSYBOX} dmesg"
 	DATE="${BUSYBOX} date"
 	MKDIR="${BUSYBOX} mkdir"
@@ -40,6 +41,7 @@ CMD_SETUP(){
 	RM="${BUSYBOX} rm"
 	PS="${BUSYBOX} ps"
 	GREP="${BUSYBOX} grep"
+	EGREP="${BUSYBOX} egrep"
 	AWK="${BUSYBOX} awk"
     SED="${BUSYBOX} sed"
 	EXPR="${BUSYBOX} expr"
@@ -57,6 +59,8 @@ CMD_SETUP(){
     TIMEOUT="${BUSYBOX} timeout"
     FIND="$BUSYBOX find"
     FUSER="$BUSYBOX fuser"
+    TR="$BUSYBOX tr"
+    SORT="$BUSYBOX sort"
 }
 
 #Function definition for get property
