@@ -74,7 +74,7 @@ F_GETPROP(){
 # Function definition for logging
 ECHOL(){
 	_DATETIME=`${BUSYBOX} date +"%F %T"`
-	echo "${_DATETIME}: $*" >> ${LOGFILE}
+	echo -e "${_DATETIME}: $*" >> ${LOGFILE}
 	return 0
 }
 
