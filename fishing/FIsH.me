@@ -88,6 +88,21 @@ EXECL(){
 	return ${_RET}
 }
 
+# PS implementation that just WORKS! 
+# Busybox ps is crap. mainly: -o doesnt work there as expected 
+F_PS(){
+    # returns: "PID:NAME"
+    for proci in $(find /proc/[0-9]* -maxdepth 1 |egrep "cmdline|comm" );do 
+        unset CMD
+        # exclude not (anymore) available proc ids
+        [ -f $proci ] && CMD=$(cat $proci)
+        if [ ! -z "$CMD" ] ;then 
+            fpid=$(echo $proci | cut -d "/" -f3)
+            echo "$fpid:$CMD"
+        fi
+    done
+}
+
 
 ### FIsH definitions
 
