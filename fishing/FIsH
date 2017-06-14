@@ -284,7 +284,9 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     
     # rm symlinks & files.
     ECHOL "### Remove symlinks and files in rootfs"
-    EXECL ${BUSYBOX} find . -maxdepth 1 \( -type l -o -type f \) -exec ${RM} -fv {} \; 2>&1 
+    for rootfile in $(${BUSYBOX} find . -maxdepth 1 \( -type l -o -type f \)|$GREP -v './init$');do
+        ${RM} -fv $rootfile
+    done
 
     # Remove some directories
     ECHOL "### Remove directories..."
