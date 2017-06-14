@@ -97,7 +97,7 @@ ${CHMOD} 660 ${LOGPATH}/ps.log
 
 # see if we want to start FIsH or not
 if [ "$FISH_FLAG" == "true" ];then
-    ECHOL "### Enforcing FIsH boot mode by $FISH_FLAG..."
+    ECHOL "### Enforcing FIsH boot mode by boot flag file.."
     RAMDISK="$FISHFOOD"
 else
     # check for the magic key press
@@ -270,37 +270,6 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     ECHOL " ### Partitions after umounting"
     $MOUNT >> /$LOGFILE
 
-    #### EXAMPLE MOUNTS AT BOOT TIME ON LL H815:
-        ###rootfs on / type rootfs (rw,relatime)
-        ###tmpfs on /dev type tmpfs (rw,seclabel,nosuid,relatime,size=1437392k,nr_inodes=359348,mode=755)
-        ###devpts on /dev/pts type devpts (rw,seclabel,relatime,mode=600)
-        ###none on /dev/cpuctl type cgroup (rw,relatime,cpu)
-        ###adb on /dev/usb-ffs/adb type functionfs (rw,relatime)
-        ###proc on /proc type proc (rw,relatime)
-        ###sysfs on /sys type sysfs (rw,seclabel,relatime)
-        ###selinuxfs on /sys/fs/selinux type selinuxfs (rw,relatime)
-        ###debugfs on /sys/kernel/debug type debugfs (rw,relatime)
-        ###none on /sys/fs/cgroup type tmpfs (rw,seclabel,relatime,size=1437392k,nr_inodes=359348,mode=750,gid=1000)
-        ###pstore on /sys/fs/pstore type pstore (rw,relatime)
-        ###none on /acct type cgroup (rw,relatime,cpuacct)
-        ###tmpfs on /mnt/asec type tmpfs (rw,seclabel,relatime,size=1437392k,nr_inodes=359348,mode=755,gid=1000)
-        ###tmpfs on /mnt/obb type tmpfs (rw,seclabel,relatime,size=1437392k,nr_inodes=359348,mode=755,gid=1000)
-        ###/mnt/pstore on /mnt/pstore type pstore (rw,relatime)
-        ###/dev/block/bootdevice/by-name/system on /system type ext4 (ro,seclabel,relatime,data=ordered)
-        ###/dev/block/bootdevice/by-name/cache on /cache type ext4 (rw,seclabel,nosuid,nodev,noatime,noauto_da_alloc,errors=continue,data=ordered)
-        ###/dev/block/bootdevice/by-name/userdata on /data type ext4 (rw,seclabel,nosuid,nodev,noatime,noauto_da_alloc,resuid=1000,errors=continue,data=ordered)
-        ###/dev/block/bootdevice/by-name/persist on /persist type ext4 (rw,seclabel,nosuid,nodev,noatime,noauto_da_alloc,errors=continue,data=ordered)
-        ###/dev/block/bootdevice/by-name/modem on /firmware type vfat (ro,context=u:object_r:firmware_file:s0,relatime,uid=1000,gid=1000,fmask=0337,dmask=0227,codepage=437,iocharset=iso8859-1,shortname=
-        ###lower,errors=remount-ro)
-        ###/dev/block/bootdevice/by-name/sns on /sns type ext4 (rw,seclabel,nosuid,nodev,noatime,noauto_da_alloc,errors=continue,data=ordered)
-        ###/dev/block/bootdevice/by-name/drm on /persist-lg type ext4 (rw,seclabel,nosuid,nodev,noatime,noauto_da_alloc,errors=continue,data=ordered)
-        ###/dev/block/bootdevice/by-name/mpt on /mpt type ext4 (rw,seclabel,nosuid,nodev,noatime,noauto_da_alloc,errors=continue,data=ordered)
-        ###/dev/block/platform/f9824900.sdhci/by-name/cust on /cust type ext4 (ro,seclabel,nosuid,nodev,relatime,noauto_da_alloc,data=ordered)
-        ###/data/media on /mnt/shell/emulated type sdcardfs (rw,nosuid,relatime,uid=1023,gid=1023,derive=legacy)
-        ###/data/media on /storage/emulated/legacy type sdcardfs (rw,nosuid,relatime,uid=1023,gid=1023,derive=legacy)
-        ###tmpfs on /storage/emulated type tmpfs (rw,seclabel,nosuid,nodev,relatime,mode=050,gid=1028)
-
-   
     # prevent bootloops in testing mode 
     if [ "$RUNONCE" -eq 1 ];then
         ECHOL "### RUNONCE DETECTED! WILL REMOVING FIsH FROM NEXT BOOT!!!"
@@ -357,10 +326,10 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     echo -e "\n\n ***** process before exec init ***** \n" >> $LOGFILE 
     $PS -T -o pid,comm,args >> $LOGFILE 
 
-    echo -e "\n\n ***** lsof before extracting ramdisk ***** \n" >> $LOGFILE
+    echo -e "\n\n ***** lsof before exec init ***** \n" >> $LOGFILE
     ${LSOF} >> $LOGFILE
 
-    echo -e "\n\n ***** inotifies before extracting ramdisk ***** \n" >> $LOGFILE    
+    echo -e "\n\n ***** inotifies before exec init ***** \n" >> $LOGFILE    
     $PS $($FIND /proc/*/fd/* -type l -lname 'anon_inode:inotify' -print 2> /dev/null | $SED -e 's/^\/proc\/\([0-9]*\)\/.*/\1/')  >> $LOGFILE    
 
     # umount all special mounts
