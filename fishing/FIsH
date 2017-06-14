@@ -243,24 +243,44 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     #done
     EXECL $MOUNT -oremount,rw /system
     
+    ECHOL " # Generating pid exclusion list based on EXCLUDEPROCS..."
+    # create list of excluded PIDs based on given names
+    unset FILTERPIDS
+    NAMEMAP=$(F_PS |$EGREP "$EXCLUDEPROCS" |cut -d ":" -f1 | $TR "\n" "|" |sed 's/||//g;s/|$//g'|$SORT -u)
+    ECHOL "based on >$EXCLUDEPROCS< these pid(s) were found: <$NAMEMAP>"
+    [ ! -z "$NAMEMAP" ]&& FILTERPIDS="$NAMEMAP"
+
+    #DEBUG: 
+    #ECHOL "These pids of PROCESS NAMES get excluded from being killed <$FILTERPIDS> as defined in EXCLUDEPROCS ($EXCLUDEPROCS)"
+
+    # if filter pids were specified add them as well
+    [ ! -z "$EXCLUDEPIDS" ] && [ ! -z "$FILTERPIDS" ] && FILTERPIDS="$FILTERPIDS|$EXCLUDEPIDS|$PID"
+    [ ! -z "$EXCLUDEPIDS" ] && [ -z "$FILTERPIDS" ] && FILTERPIDS="$EXCLUDEPIDS|$PID"
+    
+    #DEBUG:
+    #ECHOL "These PIDs get excluded from being killed as defined in EXCLUDEPIDS: <$EXCLUDEPIDS>\nIn sum all these PIDs get excluded from being killed: <$FILTERPIDS> ($PID is FIsH itself ;))"
+
     # umount all normal mounts (no /system yet!)
+    ECHOL "### killing all processes accessing defined mountpoints (if any can be found by fuser and not excluded)"
+    MOUNTS=$(for mountp in $MOUNTS;do [ -e "$mountp" ] && echo $mountp ;done)
+    # convert newlines in MOUNTS variable into spaces
+    SPACEMNT=$($ECHO $MOUNTS)
+    TOKILL=$($FUSER -m $SPACEMNT | $TR ' ' '\n' | $SORT -u | $EGREP -v "$FILTERPIDS" | $TR '\n' ' ')
+    PSGREP=$($ECHO "$TOKILL" | $SED -e 's/\([0-9]*\)/^\1:|/g;s/ //g;s/||//g;s/\^:|//g;s/|$//g')
+    ECHOL "$FUSER -m $SPACEMNT | $TR ' ' '\\n' | $EGREP -v '$FILTERPIDS' | $TR '\\n' ' '"
+
+    if [ ! -z "$TOKILL" ];then
+        echo "Trying to kill ($PSGREP):" >> $LOGFILE
+        F_PS | $EGREP "$PSGREP" >> $LOGFILE
+        $ECHO "cmd: $KILL -9 $TOKILL" >> $LOGFILE
+        $KILL -9 $TOKILL >> $LOGFILE 2>&1
+        #ECHOL "KILLING $PSGREP IS DISABLED"
+    else
+        ECHOL "Empty pid skipped..!"
+    fi
+    ECHOL "### unmounting all defined (and also available) partitions"
     for i in $MOUNTS;do
-        if [ -e "$i" ];then
-            ECHOL "### killing all processes accessing $i (if any can be found by fuser)"
-            for pid in $($FUSER -m $i);do
-                if [ $pid -eq $PID ]||[ $pid -eq 1 ];then
-                    ECHOL "skipped to kill excluded pid $pid"
-                else
-                    if [ ! -z $pid ];then
-                        echo "Trying to kill"
-                        $PS -T -o pid,comm,args | $GREP $pid >> $LOGFILE
-                        #$KILL -9 $pid >> $LOGFILE 2>&1
-                        ECHOL "KILLING IS DISABLED"
-                    else
-                        ECHOL "Empty pid skipped..!"
-                    fi
-                fi
-            done
+        if [ -e $i ];then
             EXECL ${UMOUNT} $i || EXECL ${UMOUNT} -f $i || EXECL ${UMOUNT} -l $i
         else
             ECHOL "Skipped requested unmount because it does not exist ($i)"

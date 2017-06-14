@@ -183,6 +183,23 @@ SPECMOUNTS="/dev/usb-ffs/adb \
     /sys"
     
 
+# once FIsH starts to unmount filesystems it will first try to kill all processes 
+# currently accessing that mountpoint. You can specify here either process name(s) (FIsH 
+# checks the arg so e.g. when /bin/sh starts a script u can filter on that script name)
+# or you can specify fix PID(s) <- that one makes no sense in most cases and e.g. PID 1
+# (init) is the main reason when to use it.
+# ATTENTION: 
+#     - multiple process names have to be separated by a PIPE: |
+#     - process names are CASE SENSITIVE
+#       (means: "FISH" will match "FIsH" but also "FISHing" or "myfish")
+#     - special chars are not tested!
+EXCLUDEPROCS="kworker|irq|interrupt|watchdog|busybox|FIsH"
+# ensure 1 is always set here! If u wanna add more feel free but keep in mind that 
+# everything else then init (pid 1) is dynamic and change on each boot
+# ATTENTION: multiple PIDs have to be separated by a PIPE: |
+EXCLUDEPIDS="1" 
+
+
 
 ### PORTING SECTION END ###
 ##################################################################################
