@@ -306,14 +306,14 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     
     # extract the food
     ECHOL "### Extracting uncompressed ramdisk (${RAMDISK/.gz}).."
-    #EXECL ${CPIO} -i -u < $TMPFISHDIR/${RAMDISK/.gz}
+    EXECL ${CPIO} -i -u < $TMPFISHDIR/${RAMDISK/.gz}
     # busybox cpio does not support exclusions by pattern ..
     [ -d /res/food ] && EXECL $RM -rf /res/food
-    EXECL $MKDIR /res/food
-    EXECL cd /res/food
-    EXECL ${CPIO} -i -u < $TMPFISHDIR/${RAMDISK/.gz}
-    EXECL $MV /res/food/* /
-    EXECL cd /
+    #EXECL $MKDIR /res/food
+    #EXECL cd /res/food
+    #EXECL ${CPIO} -i -u < $TMPFISHDIR/${RAMDISK/.gz}
+    #EXECL $MV /res/food/* /
+    #EXECL cd /
 
     echo -e "\n\n ***** directory before exec init ***** \n" >> $LOGFILE 
     ${LS} -la >> $LOGFILE
