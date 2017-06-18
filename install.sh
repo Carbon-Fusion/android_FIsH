@@ -152,7 +152,7 @@ fi
 # check if we run in testing mode and exit
 if [ "$1" == "--check" ];then
     echo "... restoring SELinux mode to $CURSELINUX"
-    if [$device == "Android" ];then
+    if [ $device == "Android" ];then
 		su -c setenforce $CURSELINUX
     else
         adb shell "su -c setenforce $CURSELINUX"
