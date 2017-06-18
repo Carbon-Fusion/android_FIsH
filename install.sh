@@ -52,6 +52,15 @@ MINSDK="22"
 # well 2.67 should work but i will not tell anyone ;) (totally untested)
 MINSU="279"
 
+##### Check to see if this script is running on Android or PC #####
+
+if [ -f /system/build.prop ];then
+        echo "Installer is running on Android"
+        device="Android"
+else
+        echo "Installer is running on PC"
+        device="PC"
+fi
 
 ##############################################################################################
 
@@ -61,9 +70,11 @@ echo -e "\n############# Checking for busybox"
 [ ! -f fishing/busybox ] && echo "ERROR: MISSING BUSYBOX! Download it manually and place it in the directory: ./fishing/ and name it <busybox>" && exit 3
 
 # preparing your system
-adb start-server
-echo -e "Waiting for your device... (you may have to switch to PTP mode on some devices!!)"
-adb wait-for-device
+if [ $device == "PC" ];then
+    adb start-server
+    echo -e "Waiting for your device... (you may have to switch to PTP mode on some devices!!)"
+    adb wait-for-device
+fi
 
 # precheck min requirement adb:
 adb version
@@ -82,7 +93,12 @@ F_ERR(){
 }
 
 echo "############# checking Android version"
-AVER=$(adb shell getprop ro.build.version.sdk| tr -d '\r')
+if [ $device == "Android" ];then
+	AVER=$(getprop ro.build.version.sdk| tr -d '\r')
+else
+    AVER=$(adb shell getprop ro.build.version.sdk| tr -d '\r')
+fi
+
 if [ "$AVER" -lt "$MINSDK" ];then
     echo -e "\n\n***************************************************************"
     echo "ERROR! You have Android $AVER running but $MINSDK is required. FIsH will not be able to boot! ABORTED."
@@ -102,7 +118,12 @@ else
 fi
 
 echo "############# checking SuperSU version"
-SUVER=$(adb shell su -v|cut -d ":" -f1 |tr -d '.'| tr -d '\r')
+if [ $device == "Android" ];then
+	SUVER=$(su -v|cut -d ":" -f1 |tr -d '.'| tr -d '\r')
+else
+    SUVER=$(adb shell su -v|cut -d ":" -f1 |tr -d '.'| tr -d '\r')
+fi
+
 if [ "$SUVER" -ge "$MINSU" ];then
     echo "-> Matching required SuperSU version: $SUVER"
 else
@@ -112,51 +133,97 @@ else
 fi
 
 echo "############# temporary disable SELinux"
-CURSELINUX=$(adb shell getenforce |tr -d '\r')
-RET=$(adb shell 'su -c setenforce 0; echo err=$?' | grep err=|tr -d '\r')
-F_ERR $RET
-SEL="$(adb shell getenforce|tr -d '\r')"
-echo "SELinux mode: $SEL"
-[ "$SEL" != "Permissive" ]&& echo 'ABORTED!!! YOU CAN NOT GET PERMISSIVE SELINUX MODE!' && exit
+if [ $device == "Android" ];then
+	CURSELINUX=$(getenforce |tr -d '\r')
+	RET=$(su -c setenforce 0; echo err=$? | grep err=|tr -d '\r')
+	F_ERR $RET
+	SEL="$(getenforce|tr -d '\r')"
+	echo "SELinux mode: $SEL"
+	[ "$SEL" != "Permissive" ]&& echo 'ABORTED!!! YOU CAN NOT GET PERMISSIVE SELINUX MODE!' && exit
+else
+    CURSELINUX=$(adb shell getenforce |tr -d '\r')
+    RET=$(adb shell 'su -c setenforce 0; echo err=$?' | grep err=|tr -d '\r')
+    F_ERR $RET
+    SEL="$(adb shell getenforce|tr -d '\r')"
+    echo "SELinux mode: $SEL"
+    [ "$SEL" != "Permissive" ]&& echo 'ABORTED!!! YOU CAN NOT GET PERMISSIVE SELINUX MODE!' && exit
+fi
 
 # check if we run in testing mode and exit
 if [ "$1" == "--check" ];then
     echo "... restoring SELinux mode to $CURSELINUX"
-    adb shell "su -c setenforce $CURSELINUX"
+    if [$device == "Android" ];then
+		su -c setenforce $CURSELINUX
+    else
+        adb shell "su -c setenforce $CURSELINUX"
+    fi
     echo -e "\n\nTests finished! Check the above output!! Exiting here because in checking mode. Nothing got installed.\n\n"
     exit
 fi
 
-echo "############# remount /system"
-RET=$(adb shell "su -c 'mount -oremount,rw /system; echo err=$?'" | grep err=|tr -d '\r') # bullshit.. mount do not return a valid errorcode!
-#F_ERR $RET
-echo "############# cleaning"
-RET=$(adb shell 'su -c rm -Rf /data/local/tmpfish/; echo err=$?' | grep err= |tr -d '\r')
-F_ERR $RET
-RET=$(adb shell 'su -c rm -f /system/su.d/FIsH; echo err=$?' | grep err= |tr -d '\r')
-F_ERR $RET
-RET=$(adb shell 'su -c rm -f /system/su.d/callmeFIsH; echo err=$?' | grep err= |tr -d '\r')
-F_ERR $RET
-RET=$(adb shell 'su -c rm -Rf /system/fish; echo err=$?' | grep err= |tr -d '\r')
-F_ERR $RET
-echo "############# creating temporary directory"
-RET=$(adb shell 'su -c mkdir /data/local/tmpfish; echo err=$?' | grep err=|tr -d '\r')
-F_ERR $RET
-RET=$(adb shell 'su -c chmod 777 /data/local/tmpfish; echo err=$?' | grep err=|tr -d '\r')
-F_ERR $RET
-echo "############# pushing files"
-for fishes in $(find fishing/ -type f );do adb push $fishes /data/local/tmpfish/;done
-RET=$(adb shell 'su -c chmod 755 /data/local/tmpfish/gofishing.sh; echo err=$?' | grep err=|tr -d '\r')
-F_ERR $RET
-echo "############# injecting the FIsH"
-RET=$(adb shell 'su -c /data/local/tmpfish/gofishing.sh; echo err=$?' | grep err=|tr -d '\r')
-F_ERR $RET
-echo "############# remount /system RO again"
-RET=$(adb shell 'su -c mount -oremount,ro /system; echo err=$?' | grep err=|tr -d '\r') # bullshit.. mount do not return a valid errorcode!
-#F_ERR $RET
-echo "############# restoring SELinux mode to $CURSELINUX"
-RET=$(adb shell "su -c setenforce $CURSELINUX; echo err=$?" | grep err= |tr -d '\r')
-F_ERR $RET
+if [ $device == "Android" ];then
+	echo "############# remount /system"
+	RET=$(su -c 'mount -oremount,rw /system; echo err=$?' | grep err=|tr -d '\r') # bullshit.. mount do not return a valid errorcode!
+	#F_ERR $RET
+	echo "############# cleaning"
+	RET=$(su -c rm -Rf /data/local/tmpfish/; echo err=$? | grep err= |tr -d '\r')
+	F_ERR $RET
+	RET=$(su -c rm -f /system/su.d/FIsH; echo err=$? | grep err= |tr -d '\r')
+	F_ERR $RET
+	RET=$(su -c rm -f /system/su.d/callmeFIsH; echo err=$? | grep err= |tr -d '\r')
+	F_ERR $RET
+	RET=$(su -c rm -Rf /system/fish; echo err=$? | grep err= |tr -d '\r')
+	F_ERR $RET
+	echo "############# creating temporary directory"
+	RET=$(su -c mkdir /data/local/tmpfish; echo err=$? | grep err=|tr -d '\r')
+	F_ERR $RET
+	RET=$(su -c chmod 777 /data/local/tmpfish; echo err=$? | grep err=|tr -d '\r')
+	F_ERR $RET
+	echo "############# pushing files"
+	for fishes in $(find fishing/ -type f );do cp $fishes /data/local/tmpfish/;done
+	RET=$(su -c chmod 755 /data/local/tmpfish/gofishing.sh; echo err=$? | grep err=|tr -d '\r')
+	F_ERR $RET
+	echo "############# injecting the FIsH"
+	RET=$(su -c /data/local/tmpfish/gofishing.sh; echo err=$? | grep err=|tr -d '\r')
+	F_ERR $RET
+	echo "############# remount /system RO again"
+	RET=$(su -c mount -oremount,ro /system; echo err=$? | grep err=|tr -d '\r') # bullshit.. mount do not return a valid errorcode!
+	#F_ERR $RET
+	echo "############# restoring SELinux mode to $CURSELINUX"
+	RET=$(su -c setenforce $CURSELINUX; echo err=$? | grep err= |tr -d '\r')
+	F_ERR $RET
+else
+    echo "############# remount /system"
+    RET=$(adb shell "su -c 'mount -oremount,rw /system; echo err=$?'" | grep err=|tr -d '\r') # bullshit.. mount do not return a valid errorcode!
+    #F_ERR $RET
+    echo "############# cleaning"
+    RET=$(adb shell 'su -c rm -Rf /data/local/tmpfish/; echo err=$?' | grep err= |tr -d '\r')
+    F_ERR $RET
+    RET=$(adb shell 'su -c rm -f /system/su.d/FIsH; echo err=$?' | grep err= |tr -d '\r')
+    F_ERR $RET
+    RET=$(adb shell 'su -c rm -f /system/su.d/callmeFIsH; echo err=$?' | grep err= |tr -d '\r')
+    F_ERR $RET
+    RET=$(adb shell 'su -c rm -Rf /system/fish; echo err=$?' | grep err= |tr -d '\r')
+    F_ERR $RET
+    echo "############# creating temporary directory"
+    RET=$(adb shell 'su -c mkdir /data/local/tmpfish; echo err=$?' | grep err=|tr -d '\r')
+    F_ERR $RET
+    RET=$(adb shell 'su -c chmod 777 /data/local/tmpfish; echo err=$?' | grep err=|tr -d '\r')
+    F_ERR $RET
+    echo "############# pushing files"
+    for fishes in $(find fishing/ -type f );do adb push $fishes /data/local/tmpfish/;done
+    RET=$(adb shell 'su -c chmod 755 /data/local/tmpfish/gofishing.sh; echo err=$?' | grep err=|tr -d '\r')
+    F_ERR $RET
+    echo "############# injecting the FIsH"
+    RET=$(adb shell 'su -c /data/local/tmpfish/gofishing.sh; echo err=$?' | grep err=|tr -d '\r')
+    F_ERR $RET
+    echo "############# remount /system RO again"
+    RET=$(adb shell 'su -c mount -oremount,ro /system; echo err=$?' | grep err=|tr -d '\r') # bullshit.. mount do not return a valid errorcode!
+    #F_ERR $RET
+    echo "############# restoring SELinux mode to $CURSELINUX"
+    RET=$(adb shell "su -c setenforce $CURSELINUX; echo err=$?" | grep err= |tr -d '\r')
+    F_ERR $RET
+fi
 echo "ALL DONE! Reboot and enjoy the FIsH."
 echo
 echo -e "Get support on IRC:\n"
