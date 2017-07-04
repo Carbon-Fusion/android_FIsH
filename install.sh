@@ -32,19 +32,19 @@ under certain conditions.
 The complete license and copying can be found in the file
 COPYING and COPYING.LESSER
 
+
+*********************************************************************
+**   Android FIsH: [F]luffy [I]ncredible [s]teadfasterX [H]ijack   **
+*********************************************************************
+
 EOCP
-
-echo "*********************************************************************"
-echo "**   Android FIsH: [F]luffy [I]ncredible [s]teadfasterX [H]ijack   **"
-echo "*********************************************************************"
-
 
 # The full URL to the busybox version compatible to your device:
 BUSYBOXURI="https://busybox.net/downloads/binaries/1.26.2-defconfig-multiarch/busybox-armv6l"
 
-# the required android sdk version -> have to match the fish you package 
+# the required android sdk version -> have to match the fishfood you are about to package 
 # (e.g. TWRP have to be compatible with that version)
-# This version here means the STOCK ROM version you expect for this package!
+# This version here means the minimum(!) STOCK ROM version you expect for this package!
 # find the correct SDK version e.g. here: https://en.wikipedia.org/wiki/Android_version_history
 MINSDK="22"
 
@@ -64,7 +64,17 @@ fi
 
 ##############################################################################################
 
-# we do not want to distribute busybox to avoid licensing issues so u need to download it:
+# check if there is --check ANYWHERE on the parameter list to be 100% sure that no bad things happen when unwanted
+echo "$@" | grep "check" >> /dev/null
+if [ $? -eq 0 ];then
+    CHKMODE=yes
+    echo "Installer is running in CHECK-ONLY mode!"
+else
+    CHKMODE=no
+    echo "Installer is running in REAL-INSTALLATION mode!"
+fi
+
+# we do not want to distribute busybox to avoid licensing issues so u need to download it (wget cmd may missing when running on Android..):
 echo -e "\n############# Checking for busybox"
 [ ! -f fishing/busybox ] && echo "...downloading busybox" && wget "$BUSYBOXURI" -O fishing/busybox && chmod 755 fishing/busybox
 [ ! -f fishing/busybox ] && echo "ERROR: MISSING BUSYBOX! Download it manually and place it in the directory: ./fishing/ and name it <busybox>" && exit 3
@@ -93,43 +103,60 @@ F_ERR(){
 }
 
 echo "############# checking Android version"
+REQSDK=nok
+
 if [ $device == "Android" ];then
 	AVER=$(getprop ro.build.version.sdk| tr -d '\r')
 else
     AVER=$(adb shell getprop ro.build.version.sdk| tr -d '\r')
 fi
 
-if [ "$AVER" -lt "$MINSDK" ];then
-    echo -e "\n\n***************************************************************"
-    echo "ERROR! You have Android $AVER running but $MINSDK is required. FIsH will not be able to boot! ABORTED."
-    echo -e "***************************************************************\n\n"
-    exit 3
+if [ "$CHKMODE" == "yes" ];then
+    echo -e "You have Android SDK ${AVER} running on your device"
+    REQSDK=checkmode_yourSDK_is_${AVER}
 else
-    if [ "$AVER" -gt "$MINSDK" ];then
+    if [ "$AVER" -lt "$MINSDK" ];then
         echo -e "\n\n***************************************************************"
-        echo "ERROR: Your SDK version ($AVER) is HIGHER then $MINSDK"
-        echo -e "This check ensures that the FISHFOOD is compatible with the\nramdisk we hijack!"
-        echo "You can adjust MINSDK but ensure the FISHFOOD is compatible first!"
-        echo "***************************************************************\n\n"
+        echo -e "You have Android $AVER running but $MINSDK is set to required by the FIsH dev.\nFIsH might not be able to boot!"
+        echo
+        echo -e "This check ensures that the FIsHFOOD is 100% compatible with the ramdisk we hijack"
+        echo -e "and it seems that this is not the case or the dev just had forgotten to change the MINSDK :p"
+        echo -e "You can adjust MINSDK on your own in this script but ensure the FISHFOOD is compatible first!"
+        echo -e "***************************************************************\n\n"
         exit 3
     else
-        echo "-> Good. Matching exact the required Android SDK: $MINSDK"
+        if [ "$AVER" -gt "$MINSDK" ];then
+            echo -e "\n\n***************************************************************"
+            echo -e "Your SDK version ($AVER) is HIGHER then $MINSDK\nFIsH might not be able to boot!"
+            echo 
+            echo -e "This check ensures that the FIsHFOOD is 100% compatible with the ramdisk we hijack"
+            echo -e "and it seems that this is not the case or the dev just had forgotten to change the MINSDK :p"
+            echo -e "You can adjust MINSDK on your own in this script but ensure the FISHFOOD is compatible first!"
+            echo -e "***************************************************************\n\n"
+            exit 3
+        else
+            echo "-> Good. Matching exact the required Android SDK: $MINSDK"
+            REQSDK=ok
+        fi
     fi
 fi
 
 echo "############# checking SuperSU version"
+REQSU=notok
+
 if [ $device == "Android" ];then
-	SUVER=$(su -v|cut -d ":" -f1 |tr -d '.'| tr -d '\r')
+    SUVER=$(su -v|cut -d ":" -f1 |tr -d '.'| tr -d '\r')
 else
     SUVER=$(adb shell su -v|cut -d ":" -f1 |tr -d '.'| tr -d '\r')
 fi
 
 if [ "$SUVER" -ge "$MINSU" ];then
     echo "-> Matching required SuperSU version: $SUVER"
+    REQSU=ok
 else
-    echo "ERROR! You have SuperSU $SUVER running but $MINSU is required. FIsH will not be able to boot! ABORTED."
+    echo "ERROR! You have SuperSU $SUVER running but $MINSU is required. FIsH will not be able to boot!"
     echo "Update to at least v${MINSU} with e.g. FlashFire or similar."
-    exit 3
+    if [ "$CHKMODE" == "yes" ];then REQSU=notok; else exit 3; fi
 fi
 
 echo "############# temporary disable SELinux"
@@ -139,25 +166,48 @@ if [ $device == "Android" ];then
 	F_ERR $RET
 	SEL="$(getenforce|tr -d '\r')"
 	echo "SELinux mode: $SEL"
-	[ "$SEL" != "Permissive" ]&& echo 'ABORTED!!! YOU CAN NOT GET PERMISSIVE SELINUX MODE!' && exit
+        if [ "$SEL" != "Permissive" ];then
+            echo -e 'YOU CAN NOT GET PERMISSIVE SELINUX MODE! Do you really have a FULL rooted device? It seems not..\nTry this in an adb shell: "su -c setenforce permissive"'
+            if [ "$CHKMODE" == "yes" ];then 
+                REQSEL=notok
+            else
+        	exit 3
+            fi
+        else
+            REQSEL=ok
+        fi
 else
     CURSELINUX=$(adb shell getenforce |tr -d '\r')
     RET=$(adb shell 'su -c setenforce 0; echo err=$?' | grep err=|tr -d '\r')
     F_ERR $RET
     SEL="$(adb shell getenforce|tr -d '\r')"
     echo "SELinux mode: $SEL"
-    [ "$SEL" != "Permissive" ]&& echo 'ABORTED!!! YOU CAN NOT GET PERMISSIVE SELINUX MODE!' && exit
+    if [ "$SEL" != "Permissive" ];then
+        echo -e 'YOU CAN NOT GET PERMISSIVE SELINUX MODE! Do you really have a FULL rooted device? It seems not..\nTry this in an adb shell: "su -c setenforce permissive"'
+        if [ "$CHKMODE" == "yes" ];then
+            REQSEL=notok
+        else
+            exit 3
+        fi
+    else
+        REQSEL=ok
+    fi    
 fi
 
-# check if we run in testing mode and exit
-if [ "$1" == "--check" ];then
+# if we run in testing mode revert things and exit here
+if [ "$CHKMODE" == "yes" ];then
     echo "... restoring SELinux mode to $CURSELINUX"
     if [ $device == "Android" ];then
 		su -c setenforce $CURSELINUX
     else
         adb shell "su -c setenforce $CURSELINUX"
     fi
-    echo -e "\n\nTests finished! Check the above output!! Exiting here because in checking mode. Nothing got installed.\n\n"
+    echo -e "\n\nT############# Test results"
+    echo -e "\nREQSDK=$REQSDK\nREQSU=$REQSU\nREQSEL=$REQSEL\n"
+    echo -e "\nTests finished! Check the above output!"
+    echo -e "If any of the REQxxx are set to <notok> then FIsH will not work for you atm."
+    echo -e "Check the above messages to fix this and re-run the check afterwards."
+    echo -e "Exiting here because in checking mode. Nothing got installed.\n\n"
     exit
 fi
 
