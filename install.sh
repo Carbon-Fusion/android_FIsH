@@ -32,19 +32,19 @@ under certain conditions.
 The complete license and copying can be found in the file
 COPYING and COPYING.LESSER
 
+
+*********************************************************************
+**   Android FIsH: [F]luffy [I]ncredible [s]teadfasterX [H]ijack   **
+*********************************************************************
+
 EOCP
-
-echo "*********************************************************************"
-echo "**   Android FIsH: [F]luffy [I]ncredible [s]teadfasterX [H]ijack   **"
-echo "*********************************************************************"
-
 
 # The full URL to the busybox version compatible to your device:
 BUSYBOXURI="https://busybox.net/downloads/binaries/1.26.2-defconfig-multiarch/busybox-armv6l"
 
-# the required android sdk version -> have to match the fish you package 
+# the required android sdk version -> have to match the fishfood you are about to package 
 # (e.g. TWRP have to be compatible with that version)
-# This version here means the STOCK ROM version you expect for this package!
+# This version here means the minimum(!) STOCK ROM version you expect for this package!
 # find the correct SDK version e.g. here: https://en.wikipedia.org/wiki/Android_version_history
 MINSDK="22"
 
