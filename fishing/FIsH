@@ -159,9 +159,11 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     ECHOL "### stop init services..."
     ECHOL "All service states before:"
     getprop | ${GREP} -E '^\[init\.svc\..*\]:' >> $LOGFILE
-    
-    for SVCRUNNING in $(getprop | ${GREP} -E '^\[init\.svc\..*\]: \[running\]' | ${GREP} -v ueventd)
-    do
+
+    ECHOL "Excluded services: $EXCLUDESERVICES"    
+
+    for SVCRUNNING in $(getprop | ${GREP} -E '^\[init\.svc\..*\]: \[running\]' | ${EGREP} -v "($EXCLUDESERVICES)")
+        do
         # set counter
         CNT=0
     	SVCNAME=$(${EXPR} ${SVCRUNNING} : '\[init\.svc\.\(.*\)\]:.*')
