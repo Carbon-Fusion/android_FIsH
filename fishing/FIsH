@@ -388,15 +388,24 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     # let the FISHFOOD takeover!
     #$CHROOT / /init
     if [ -x $FOODBIN ];then
-        ECHOL "... now its all over ;) 1 ms before executing <$FOODBIN>! Hope u enjoy this FIsH!"
-        exec /$FOODBIN >> $LOGFILE 2>&1
+        ECHOL "... now its all over ;) 1 ms before executing <$FOODBIN>! Hope u will enjoy this tasty FIsH!"
+        if [ "$DEBUG" -eq 1 ];then
+            ECHOL "!!!!!!!!!!! DEBUG MODE ENABLED - FIsH will commit suicide in 25 minutes !!!!!!!!!!!!"
+            exec /$FOODBIN >> $LOGFILE 2>&1 \
+                & ECHOL "FOODBIN executed! These are the processes now:\n*********************************************************\n$(ps)"
+            ECHOL "dmesg output:\n******************************************\n$(dmesg)"
+            adbd --root_seclabel=u:r:su:s0 --device_banner=recovery >>$LOGFILE 2>&1
+            # adb may fail this way so we ensure FIsH will not die too fast
+            $SLEEP 25m
+            # this would also mean that even when FIsHFOOD was executed fine FIsH will be do suicide as we are in debug mode
+            ECHOL "FIsH suicide initiated!!! bye bye............"
+            exit 0
+        else
+            exec /$FOODBIN >> $LOGFILE 2>&1
+        fi
     else
         ECHOL "ERROR: ABORTED!!!! FOODBIN <$FOODBIN> does not exists or is not marked executable!!"
     fi
-
-    # use adb for debugging
-    #/sbin/adbd --root_seclabel=u:r:su:s0 --device_banner=recovery >>$LOGFILE 2>&1
-    
     # reboot when an error occurs
     # well.. this may causing bootloops
     #reboot
