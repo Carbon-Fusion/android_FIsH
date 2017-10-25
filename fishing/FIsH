@@ -396,7 +396,7 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
             ECHOL "dmesg output:\n******************************************\n$(dmesg)"
             adbd --root_seclabel=u:r:su:s0 --device_banner=recovery >>$LOGFILE 2>&1
             # adb may fail this way so we ensure FIsH will not die too fast
-            $SLEEP 25m
+            $SLEEP $SUICIDETIME
             # this would also mean that even when FIsHFOOD was executed fine FIsH will be do suicide as we are in debug mode
             ECHOL "FIsH suicide initiated!!! bye bye............"
             exit 0
