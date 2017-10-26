@@ -33,9 +33,10 @@ RUNONCE=0
 # enabled DEBUG mode for FIsH:
 # - more log output
 # - FIsHFOOD will be executed in the background and generates debug output afterwards
-# - FIsH will commit suicide after the defined SUICIDETIME
+# - FIsH will commit suicide after the defined SUICIDETIME (default 25 minutes)
 DEBUG=0
-SUICIDETIME=25m         # uses the "sleep" syntax
+SUICIDETIME=         # Default is 25 minutes! Leave empty for default value. Uses the "sleep" syntax
+DEBUGEXTRACMD=       # any commmand u wanna exec before the debug goes into sleep (e.g: /sbin/recovery)
 
 # time in seconds for how long you want to wait for the magic key press
 # if you set this too long Android may been booted up completely and if u make it

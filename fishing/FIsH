@@ -392,12 +392,23 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
         if [ "$DEBUG" -eq 1 ];then
             ECHOL "!!!!!!!!!!! DEBUG MODE ENABLED - FIsH will commit suicide in 25 minutes !!!!!!!!!!!!"
             exec /$FOODBIN >> $LOGFILE 2>&1 \
-                & ECHOL "FOODBIN executed! These are the processes now:\n*********************************************************\n$(ps)"
-            ECHOL "dmesg output:\n******************************************\n$(dmesg)"
-            adbd --root_seclabel=u:r:su:s0 --device_banner=recovery >>$LOGFILE 2>&1
-            # adb may fail this way so we ensure FIsH will not die too fast
-            $SLEEP $SUICIDETIME
-            # this would also mean that even when FIsHFOOD was executed fine FIsH will be do suicide as we are in debug mode
+                & ECHOL "FOODBIN executed! These are the processes now:\n*********************************************************\n$(/res/fish/busybox ps)"
+            ECHOL "dmesg output:\n******************************************\n$(/res/fish/busybox dmesg)"
+            #adbd --root_seclabel=u:r:su:s0 --device_banner=recovery >>$LOGFILE 2>&1
+            # execute any extra commands if defined
+            if [ ! -z "$DEBUGEXTRACMD" ];then
+                ECHOL "$($DEBUGEXTRACMD 2>&1)"
+                ECHOL "dmesg output (after >$DEBUGEXTRACMD<):\n******************************************\n$(/res/fish/busybox dmesg)"
+            fi
+
+            # ensure FIsH will not die too fast for debugging purposes
+            : "${SUICIDETIME}:=25m}"
+            ECHOL "after advanced time syntax: $SUICIDETIME"
+            [ -z "$SUICIDETIME" ] && SUICIDETIME=26m
+            ECHOL "after bulletproof time syntax: $SUICIDETIME"
+            /res/fish/busybox sleep $SUICIDETIME
+
+            # even when FIsHFOOD was executed fine FIsH will be do suicide as we are in debug mode
             ECHOL "FIsH suicide initiated!!! bye bye............"
             exit 0
         else
