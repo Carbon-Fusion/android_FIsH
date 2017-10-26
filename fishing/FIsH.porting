@@ -30,10 +30,11 @@
 # RUNONCE means FIsH will be removed after run once!!
 RUNONCE=0
 
-# enabled DEBUG mode for FIsH:
+# enable DEBUG mode for FIsH:
 # - more log output
-# - FIsHFOOD will be executed in the background and generates debug output afterwards
+# - FOODBIN will be executed in the background and generates debug output afterwards
 # - FIsH will commit suicide after the defined SUICIDETIME (default 25 minutes)
+# - optional: execute any command of your choice after FOODBIN has started by DEBUGEXTRACMD
 DEBUG=0
 SUICIDETIME=         # Default is 25 minutes! Leave empty for default value. Uses the "sleep" syntax
 DEBUGEXTRACMD=       # any commmand u wanna exec before the debug goes into sleep (e.g: /sbin/recovery)
