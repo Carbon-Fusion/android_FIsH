@@ -389,6 +389,7 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     #$CHROOT / /init
     if [ -x $FOODBIN ];then
         ECHOL "... now its all over ;) 1 ms before executing <$FOODBIN>! Hope u will enjoy this tasty FIsH!"
+        # debugging a FIsHFOOD can be a PITA so FIsH comes with a special DEBUG mode to help you out there
         if [ "$DEBUG" -eq 1 ];then
             ECHOL "!!!!!!!!!!! DEBUG MODE ENABLED - FIsH will commit suicide in 25 minutes !!!!!!!!!!!!"
             exec /$FOODBIN >> $LOGFILE 2>&1 \
