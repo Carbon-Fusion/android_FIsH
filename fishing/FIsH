@@ -159,9 +159,11 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     ECHOL "### stop init services..."
     ECHOL "All service states before:"
     getprop | ${GREP} -E '^\[init\.svc\..*\]:' >> $LOGFILE
-    
-    for SVCRUNNING in $(getprop | ${GREP} -E '^\[init\.svc\..*\]: \[running\]' | ${GREP} -v ueventd)
-    do
+
+    ECHOL "Excluded services: $EXCLUDESERVICES"    
+
+    for SVCRUNNING in $(getprop | ${GREP} -E '^\[init\.svc\..*\]: \[running\]' | ${EGREP} -v "($EXCLUDESERVICES)")
+        do
         # set counter
         CNT=0
     	SVCNAME=$(${EXPR} ${SVCRUNNING} : '\[init\.svc\.\(.*\)\]:.*')
@@ -386,15 +388,43 @@ if [ -f ${BTMGRPATH}/${RAMDISK} ];then
     # let the FISHFOOD takeover!
     #$CHROOT / /init
     if [ -x $FOODBIN ];then
-        ECHOL "... now its all over ;) 1 ms before executing <$FOODBIN>! Hope u enjoy this FIsH!"
-        exec /$FOODBIN >> $LOGFILE 2>&1
+        ECHOL "... now its all over ;) 1 ms before executing <$FOODBIN>! Hope u will enjoy this tasty FIsH!"
+        # debugging a FIsHFOOD can be a PITA so FIsH comes with a special DEBUG mode to help you out there
+        if [ "$DEBUG" -eq 1 ];then
+            # clean dmesg
+            dmesg -c >> /dev/null 2>&1
+            ECHOL "!!!!!!!!!!! DEBUG MODE ENABLED - FIsH will commit suicide in 25 minutes !!!!!!!!!!!!"
+            exec /$FOODBIN >> $LOGFILE 2>&1 \
+                & ECHOL "FOODBIN executed! These are the processes now:\n*********************************************************\n$(/res/fish/busybox ps)"
+            ECHOL "dmesg output:\n******************************************\n$(/res/fish/busybox dmesg -c)"
+
+            # try to enable adb
+            adbd --root_seclabel=u:r:su:s0 --device_banner=recovery >>$LOGFILE 2>&1
+            service adbd start >>$LOGFILE 2>&1
+
+            # execute any extra commands if defined
+            if [ ! -z "$DEBUGEXTRACMD" ];then
+                ECHOL "$($DEBUGEXTRACMD 2>&1)"
+                ECHOL "$DEBUGEXTRACMD executed! These are the processes now:\n*********************************************************\n$(/res/fish/busybox ps)"
+                ECHOL "dmesg output (after >$DEBUGEXTRACMD<):\n******************************************\n$(/res/fish/busybox dmesg -c)"
+            fi
+
+            # ensure FIsH will not die too fast for debugging purposes
+            SUICIDETIME="${SUICIDETIME:-25m}"
+            ECHOL "after advanced time syntax: $SUICIDETIME"
+            [ -z "$SUICIDETIME" ] && SUICIDETIME=26m
+            ECHOL "after bulletproof time syntax: $SUICIDETIME"
+            /res/fish/busybox sleep $SUICIDETIME
+
+            # even when FIsHFOOD was executed fine FIsH will be do suicide as we are in debug mode
+            ECHOL "FIsH suicide initiated!!! bye bye............"
+            exit 0
+        else
+            exec /$FOODBIN >> $LOGFILE 2>&1
+        fi
     else
         ECHOL "ERROR: ABORTED!!!! FOODBIN <$FOODBIN> does not exists or is not marked executable!!"
     fi
-
-    # use adb for debugging
-    #/sbin/adbd --root_seclabel=u:r:su:s0 --device_banner=recovery >>$LOGFILE 2>&1
-    
     # reboot when an error occurs
     # well.. this may causing bootloops
     #reboot

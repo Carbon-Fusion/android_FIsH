@@ -30,8 +30,14 @@
 # RUNONCE means FIsH will be removed after run once!!
 RUNONCE=0
 
-# will generate more DEBUG files in the FIsH log directory (unused atm)
+# enable DEBUG mode for FIsH:
+# - more log output
+# - FOODBIN will be executed in the background and generates debug output afterwards
+# - FIsH will commit suicide after the defined SUICIDETIME (default 25 minutes)
+# - optional: execute any command of your choice after FOODBIN has started by DEBUGEXTRACMD
 DEBUG=0
+SUICIDETIME=         # Default is 25 minutes! Leave empty for default value. Uses the "sleep" syntax
+DEBUGEXTRACMD=       # any commmand u wanna exec before the debug goes into sleep (e.g: /sbin/recovery)
 
 # time in seconds for how long you want to wait for the magic key press
 # if you set this too long Android may been booted up completely and if u make it
@@ -183,23 +189,31 @@ SPECMOUNTS="/dev/usb-ffs/adb \
     /sys"
     
 
-# once FIsH starts to unmount filesystems it will first try to kill all processes 
-# currently accessing that mountpoint. You can specify here either process name(s) (FIsH 
-# checks the arg so e.g. when /bin/sh starts a script u can filter on that script name)
-# or you can specify fix PID(s) <- that one makes no sense in most cases and e.g. PID 1
-# (init) is the main reason when to use it.
+# once FIsH starts to unmount filesystems it will first try to stop all unneeded services
+# and kill all processes currently accessing that mountpoint.
+#
+# You can specify here to exclude:
+#  - service names (u can see all in Android like this: getprop | grep svc )
+#  - process name(s) (FIsH checks the arg so e.g. when /bin/sh starts a script u can 
+#    filter on that script name)
+# 
+# Even when you could even exclude PID(s) this makes no sense in most cases as the pid 
+# is nothing you can predict and is though completely dynamic
+# init is 1 always and the main reason why it exists.
+#
 # ATTENTION: 
-#     - multiple process names have to be separated by a PIPE: |
-#     - process names are CASE SENSITIVE
+#     - multiple service/process names have to be separated by a PIPE: |
+#     - service/process names are CASE SENSITIVE and not strict!
 #       (means: "FISH" will match "FIsH" but also "FISHing" or "myfish")
 #     - special chars are not tested!
+EXCLUDESERVICES="ueventd|qseecomd"
 EXCLUDEPROCS="kworker|irq|interrupt|watchdog|busybox|FIsH"
-# ensure 1 is always set here! If u wanna add more feel free but keep in mind that 
+
+
+# ensure 1 is always set here! If u wanna add more.. feel free but keep in mind that 
 # everything else then init (pid 1) is dynamic and change on each boot
 # ATTENTION: multiple PIDs have to be separated by a PIPE: |
 EXCLUDEPIDS="1" 
-
-
 
 ### PORTING SECTION END ###
 ##################################################################################
